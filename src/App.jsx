@@ -207,7 +207,7 @@ function AuthScreen({ onAuth, t }) {
       if (form.password.length < 6) { setError('Contraseña mínimo 6 caracteres'); return; }
       const users = storage.get('gp_users', []);
       if (users.find(u => u.email.toLowerCase() === form.email.toLowerCase())) { setError('Correo ya registrado'); return; }
-      const user = { id: uid(), name: form.name.trim(), email: form.email.toLowerCase().trim(), password: form.password, position: form.position.trim(), area: form.area.trim(), createdAt: now() };
+      const user = { id: uid(), name: form.name.trim(), email: form.email.toLowerCase().trim(), password: form.password, position: form.position.trim(), area: form.area.trim(), role: 'employee', createdAt: now() };
       storage.set('gp_users', [...users, user]);
       setLoading(true);
       setTimeout(() => { setLoading(false); onAuth(user); }, 500);
@@ -1423,11 +1423,141 @@ function MyProcessesScreen({ user, processes, users, workspaces, onOpen, onEdit,
 }
 
 // ════════════════════════════════════════════════════════════
+// ROLES CONFIG
+// ════════════════════════════════════════════════════════════
+const ROLES = {
+  admin:      { label: 'Administrador',       emoji: '👑', color: '#8b5cf6' },
+  supervisor: { label: 'Sup. de Encargados',  emoji: '⭐', color: '#3b6ef6' },
+  manager:    { label: 'Encargado',           emoji: '👔', color: '#10b981' },
+  employee:   { label: 'Empleado',            emoji: '👤', color: '#64748b' },
+};
+function RoleBadge({ role, t }) {
+  const r = ROLES[role] || ROLES.employee;
+  return (
+    <span style={{ display:'inline-flex', alignItems:'center', gap:4, background: r.color+'18', color: r.color, borderRadius:999, padding:'3px 10px', fontSize:12, fontWeight:700 }}>
+      {r.emoji} {r.label}
+    </span>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
+// ADMIN PANEL
+// ════════════════════════════════════════════════════════════
+function AdminScreen({ currentUser, users, onBack, onSaveUser, onDeleteUser, t }) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [form, setForm] = useState({ name:'', email:'', password:'', position:'', area:'', role:'employee' });
+  const [error, setError] = useState('');
+  const set = k => e => setForm(f => ({...f, [k]: e.target.value}));
+
+  const openCreate = () => { setForm({ name:'', email:'', password:'', position:'', area:'', role:'employee' }); setEditingUser(null); setError(''); setShowCreate(true); };
+  const openEdit = (u) => { setForm({ name:u.name, email:u.email, password:u.password, position:u.position, area:u.area, role:u.role||'employee' }); setEditingUser(u); setError(''); setShowCreate(true); };
+
+  const save = () => {
+    setError('');
+    if (!form.name.trim()||!form.email.trim()||!form.position.trim()||!form.area.trim()) { setError('Completa todos los campos'); return; }
+    if (!editingUser && form.password.length < 6) { setError('Contraseña mínimo 6 caracteres'); return; }
+    if (!editingUser && users.find(u => u.email.toLowerCase()===form.email.toLowerCase())) { setError('Correo ya registrado'); return; }
+    const saved = {
+      id: editingUser?.id || uid(),
+      name: form.name.trim(), email: form.email.toLowerCase().trim(),
+      password: form.password || editingUser?.password,
+      position: form.position.trim(), area: form.area.trim(),
+      role: form.role, createdAt: editingUser?.createdAt || now(),
+    };
+    onSaveUser(saved);
+    setShowCreate(false);
+  };
+
+  const grouped = Object.keys(ROLES).map(role => ({ role, members: users.filter(u => (u.role||'employee') === role) })).filter(g => g.members.length > 0);
+
+  const Lbl = ({ children }) => <label style={{ fontSize:13, fontWeight:700, color:t.textSub, display:'block', marginBottom:6 }}>{children}</label>;
+
+  return (
+    <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
+      <div style={{ background:`linear-gradient(135deg,${t.purple} 0%,#6d28d9 100%)`, padding:'52px 20px 24px', borderRadius:'0 0 28px 28px', marginBottom:20 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+          <button onClick={onBack} style={{ background:'rgba(255,255,255,.2)', border:'none', borderRadius:12, padding:8, cursor:'pointer', display:'flex' }}>
+            <ArrowLeft size={20} color="#fff"/>
+          </button>
+          <button onClick={openCreate} style={{ background:'rgba(255,255,255,.2)', border:'none', borderRadius:12, padding:'8px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, color:'#fff', fontWeight:700, fontSize:13 }}>
+            <Plus size={16}/> Nuevo usuario
+          </button>
+        </div>
+        <h2 style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:4 }}>Panel de administración</h2>
+        <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} registrado{users.length!==1?'s':''}</p>
+      </div>
+
+      <div style={{ padding:'0 16px' }}>
+        {grouped.map(({ role, members }) => (
+          <div key={role} style={{ marginBottom:24 }}>
+            <div className="section-title"><RoleBadge role={role} t={t}/></div>
+            <div className="card" style={{ padding:'0 16px' }}>
+              {members.map((u, i) => (
+                <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom: i<members.length-1?`1px solid ${t.border}`:'none' }}>
+                  <Avatar name={u.name} size={40}/>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:t.text }}>{u.name} {u.id===currentUser.id&&<span style={{ fontSize:11, color:t.textMuted }}>(tú)</span>}</div>
+                    <div style={{ fontSize:12, color:t.textMuted }}>{u.email}</div>
+                    <div style={{ fontSize:11, color:t.textMuted }}>{u.position} · {u.area}</div>
+                  </div>
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={() => openEdit(u)} style={{ background:t.primaryLight, color:t.primary, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Edit3 size={13}/></button>
+                    {u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} style={{ background:t.dangerLight, color:t.danger, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Trash2 size={13}/></button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Modal crear/editar usuario */}
+      {showCreate && (
+        <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle"/>
+            <h3 style={{ fontSize:17, fontWeight:800, color:t.text, marginBottom:16 }}>{editingUser ? 'Editar usuario' : 'Crear usuario'}</h3>
+            <div style={{ marginBottom:12 }}><Lbl>Nombre completo *</Lbl><input type="text" value={form.name} onChange={set('name')} placeholder="Nombre"/></div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+              <div><Lbl>Puesto *</Lbl><input type="text" value={form.position} onChange={set('position')} placeholder="Puesto"/></div>
+              <div><Lbl>Área *</Lbl><input type="text" value={form.area} onChange={set('area')} placeholder="Área"/></div>
+            </div>
+            <div style={{ marginBottom:12 }}><Lbl>Correo *</Lbl><input type="email" value={form.email} onChange={set('email')} placeholder="correo@empresa.com" disabled={!!editingUser} style={{ opacity: editingUser?0.6:1 }}/></div>
+            <div style={{ marginBottom:12 }}><Lbl>{editingUser ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña *'}</Lbl><input type="password" value={form.password} onChange={set('password')} placeholder={editingUser ? 'Sin cambios' : '••••••••'}/></div>
+            <div style={{ marginBottom:16 }}>
+              <Lbl>Rol *</Lbl>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {Object.entries(ROLES).map(([key, r]) => (
+                  <button key={key} onClick={() => setForm(f => ({...f, role:key}))}
+                    style={{ padding:'10px 8px', borderRadius:12, border:`2px solid ${form.role===key?r.color:t.border}`, background:form.role===key?r.color+'15':t.card, cursor:'pointer', textAlign:'left', transition:'all .15s' }}>
+                    <div style={{ fontSize:16 }}>{r.emoji}</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:form.role===key?r.color:t.text, marginTop:2 }}>{r.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {error && <div style={{ background:t.dangerLight, color:t.danger, borderRadius:10, padding:'10px 14px', fontSize:13, marginBottom:12, display:'flex', gap:8 }}><AlertCircle size={16}/>{error}</div>}
+            <div style={{ display:'flex', gap:10 }}>
+              <button style={{ flex:1, padding:'12px', borderRadius:12, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }} onClick={() => setShowCreate(false)}>Cancelar</button>
+              <button style={{ flex:2, padding:'12px', borderRadius:12, background:t.primary, color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }} onClick={save}>
+                <CheckCircle2 size={16}/> {editingUser ? 'Guardar cambios' : 'Crear usuario'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
 // PROFILE
 // ════════════════════════════════════════════════════════════
-function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkToggle, darkMode, t }) {
+function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkToggle, darkMode, onOpenAdmin, t }) {
   const mine = processes.filter(p => p.authorId===user.id && p.status==='published');
   const myWsCount = workspaces.filter(w => w.managerId===user.id || w.memberIds?.includes(user.id)).length;
+  const isAdmin = user.role === 'admin';
 
   return (
     <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
@@ -1439,6 +1569,7 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
           <p style={{ fontSize:14, color:t.textSub, marginBottom:2 }}>{user.position}</p>
           <p style={{ fontSize:13, color:t.textMuted }}>{user.area}</p>
           <p style={{ fontSize:12, color:t.textMuted, marginTop:2 }}>{user.email}</p>
+          <div style={{ marginTop:10 }}><RoleBadge role={user.role||'employee'} t={t}/></div>
           <div style={{ display:'flex', justifyContent:'center', gap:20, marginTop:16, paddingTop:16, borderTop:`1px solid ${t.border}` }}>
             {[['Procesos',mine.length],['Proyectos',myWsCount],['Likes',mine.reduce((s,p)=>s+(p.likes?.length||0),0)]].map(([l,v]) => (
               <div key={l} style={{ textAlign:'center' }}>
@@ -1448,6 +1579,15 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
             ))}
           </div>
         </div>
+        {isAdmin && (
+          <div className="card" style={{ marginBottom:16, overflow:'hidden' }}>
+            <button onClick={onOpenAdmin} style={{ display:'flex', alignItems:'center', gap:14, width:'100%', padding:'16px 20px', background:'transparent', border:'none', color:t.text, fontSize:15, fontWeight:600, cursor:'pointer' }}>
+              <span style={{ color:t.purple }}>👑</span>
+              Panel de administración
+              <span style={{ marginLeft:'auto', color:t.textMuted }}><ChevronRight size={18}/></span>
+            </button>
+          </div>
+        )}
         <div className="card" style={{ marginBottom:16, overflow:'hidden' }}>
           <button onClick={onDarkToggle} style={{ display:'flex', alignItems:'center', gap:14, width:'100%', padding:'16px 20px', background:'transparent', border:'none', color:t.text, fontSize:15, fontWeight:600, cursor:'pointer' }}>
             <span style={{ color:t.primary }}>{darkMode ? <Sun size={20}/> : <Moon size={20}/>}</span>
@@ -1481,7 +1621,7 @@ export default function App() {
   const [users, setUsers] = useState(() => {
     const stored = storage.get('gp_users', []);
     if (stored.length === 0) {
-      const admin = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Encargado', area: 'General', createdAt: new Date().toISOString() };
+      const admin = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Administrador', area: 'General', role: 'admin', createdAt: new Date().toISOString() };
       storage.set('gp_users', [admin]);
       return [admin];
     }
@@ -1494,6 +1634,7 @@ export default function App() {
   const [viewActivity, setViewActivity] = useState(null);
 
   const [tab, setTab]               = useState('home');
+  const [viewAdmin, setViewAdmin]   = useState(false);
   const [viewProc, setViewProc]     = useState(null);
   const [editProc, setEditProc]     = useState(null);
   const [creating, setCreating]     = useState(false);
@@ -1511,7 +1652,9 @@ export default function App() {
   useEffect(() => { storage.set('gp_activities', activities); }, [activities]);
 
   const handleAuth = (u) => { storage.set('gp_session', u.id); setUser(u); setUsers(storage.get('gp_users',[])); };
-  const handleLogout = () => { storage.set('gp_session',null); setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); };
+  const handleLogout = () => { storage.set('gp_session',null); setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); setViewAdmin(false); };
+  const saveUser = (u) => { setUsers(prev => prev.find(x=>x.id===u.id) ? prev.map(x=>x.id===u.id?u:x) : [...prev,u]); };
+  const deleteUser = (id) => { setUsers(prev => prev.filter(u=>u.id!==id)); };
 
   // Processes CRUD
   const saveProcess = (proc) => {
@@ -1582,6 +1725,11 @@ export default function App() {
   if (!user) return <div style={{ height:'100%', overflow:'auto' }}><AuthScreen onAuth={handleAuth} t={t}/></div>;
 
   // ── View activity
+  // ── Admin panel
+  if (viewAdmin) return <div style={{ height:'100%', overflow:'hidden', background:t.bg }}>
+    <AdminScreen currentUser={user} users={users} onBack={() => setViewAdmin(false)} onSaveUser={saveUser} onDeleteUser={deleteUser} t={t}/>
+  </div>;
+
   if (viewActivity) {
     const freshActivity = activities.find(a => a.id === viewActivity.id) || viewActivity;
     const proc = processes.find(p => p.id === freshActivity.processId);
@@ -1645,7 +1793,7 @@ export default function App() {
         {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} t={t}/>}
         {tab==='workspaces' && <WorkspacesScreen user={user} workspaces={workspaces} processes={processes} users={users} onOpenWs={openWs} onCreateWs={() => setCreatingWs(true)} t={t}/>}
         {tab==='mine'       && <MyProcessesScreen user={user} processes={processes} users={users} workspaces={workspaces} onOpen={openProcess} onEdit={editProcess} onSubmit={submitProcess} t={t}/>}
-        {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} t={t}/>}
+        {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
       </div>
 
       {tab !== 'profile' && tab !== 'workspaces' && (
