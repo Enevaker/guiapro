@@ -1477,8 +1477,17 @@ export default function App() {
   const t = darkMode ? DARK : LIGHT;
   useEffect(() => { injectStyles(t); }, [t]);
 
-  const [user, setUser]             = useState(() => { const sid=storage.get('gp_session'); return sid ? storage.get('gp_users',[]).find(u=>u.id===sid)||null : null; });
-  const [users, setUsers]           = useState(() => storage.get('gp_users', []));
+  // Seed admin si no hay usuarios registrados
+  const [users, setUsers] = useState(() => {
+    const stored = storage.get('gp_users', []);
+    if (stored.length === 0) {
+      const admin = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Encargado', area: 'General', createdAt: new Date().toISOString() };
+      storage.set('gp_users', [admin]);
+      return [admin];
+    }
+    return stored;
+  });
+  const [user, setUser] = useState(() => { const sid=storage.get('gp_session'); return sid ? storage.get('gp_users',[]).find(u=>u.id===sid)||null : null; });
   const [processes, setProcesses]   = useState(() => storage.get('gp_processes', []));
   const [workspaces, setWorkspaces] = useState(() => storage.get('gp_workspaces', []));
   const [activities, setActivities] = useState(() => storage.get('gp_activities', []));
