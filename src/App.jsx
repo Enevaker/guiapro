@@ -419,6 +419,7 @@ function WorkspacesScreen({ user, workspaces, processes, users, onOpenWs, onCrea
   const [joinSuccess, setJoinSuccess] = useState('');
   const [showJoin, setShowJoin] = useState(false);
 
+  const canManage = ['admin','supervisor','manager'].includes(user.role);
   const myWs = workspaces.filter(w => w.managerId === user.id || w.memberIds?.includes(user.id));
   const managed = myWs.filter(w => w.managerId === user.id);
   const member  = myWs.filter(w => w.managerId !== user.id);
@@ -460,10 +461,13 @@ function WorkspacesScreen({ user, workspaces, processes, users, onOpenWs, onCrea
           <div className="empty-state" style={{ padding:'60px 20px' }}>
             <div className="empty-icon" style={{ width:80, height:80, borderRadius:24 }}><Briefcase size={36} color={t.primary}/></div>
             <h3 style={{ fontSize:18, fontWeight:800, color:t.text }}>Sin proyectos aún</h3>
-            <p style={{ fontSize:14, maxWidth:280, lineHeight:1.6 }}>Crea tu primer proyecto para organizar a tu equipo y sus procesos.</p>
-            <button style={{ marginTop:8, display:'flex', alignItems:'center', gap:8, background:t.primary, color:'#fff', border:'none', borderRadius:12, padding:'12px 24px', fontWeight:700, fontSize:15, cursor:'pointer' }} onClick={onCreateWs}>
-              <Plus size={18}/> Crear proyecto
-            </button>
+            {canManage
+              ? <><p style={{ fontSize:14, maxWidth:280, lineHeight:1.6 }}>Crea tu primer proyecto para organizar a tu equipo y sus procesos.</p>
+                  <button style={{ marginTop:8, display:'flex', alignItems:'center', gap:8, background:t.primary, color:'#fff', border:'none', borderRadius:12, padding:'12px 24px', fontWeight:700, fontSize:15, cursor:'pointer' }} onClick={onCreateWs}>
+                    <Plus size={18}/> Crear proyecto
+                  </button></>
+              : <p style={{ fontSize:14, maxWidth:280, lineHeight:1.6 }}>Pide el código de invitación a tu encargado para unirte a un proyecto.</p>
+            }
           </div>
         ) : (
           <>
@@ -479,7 +483,7 @@ function WorkspacesScreen({ user, workspaces, processes, users, onOpenWs, onCrea
         )}
       </div>
 
-      <button className="fab" onClick={onCreateWs} title="Nuevo proyecto"><Plus size={26}/></button>
+      {canManage && <button className="fab" onClick={onCreateWs} title="Nuevo proyecto"><Plus size={26}/></button>}
     </div>
   );
 }
