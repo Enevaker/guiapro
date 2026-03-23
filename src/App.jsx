@@ -314,15 +314,6 @@ function HomeScreen({ user, processes, users, workspaces, activities, onOpen, on
   // IDs de encargados de MIS proyectos (para procesos privados)
   const myWsManagerIds = new Set(workspaces.filter(w => myWsIds.includes(w.id)).map(w => w.managerId));
   const myArea = visible.filter(p => p.area?.toLowerCase() === user.area?.toLowerCase()).slice(0, 5);
-  // Recién agregados:
-  //   - 'general' publicado por cualquier encargado → visible para todos
-  //   - 'private' publicado por encargado de MIS proyectos → solo yo (y el equipo)
-  const recent = [...visible].filter(p => {
-    const byManager = allManagerIds.has(p.authorId) || myWsManagerIds.has(p.authorId);
-    if (!byManager) return false;
-    if (!p.visibility || p.visibility === 'general') return true;
-    return myWsManagerIds.has(p.authorId);
-  }).sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0, 8);
   const pendingActivities = (activities || []).filter(a => {
     if (!myWsIds.includes(a.workspaceId)) return false;
     const assigned = a.assignedTo === 'all' || (Array.isArray(a.assignedTo) && a.assignedTo.includes(user.id));
@@ -400,9 +391,8 @@ function HomeScreen({ user, processes, users, workspaces, activities, onOpen, on
                 })}
               </div>
             )}
-            {recent.length > 0  && <Section title={<><Clock size={15}/>Recién agregados</>} items={recent} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>}
             {myArea.length > 0 && <Section title={<><Layers size={15}/>Procesos de tu área</>} items={myArea} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>}
-            {recent.length === 0 && myArea.length === 0 && visible.length > 0 && (
+            {myArea.length === 0 && visible.length > 0 && (
               <Section title={<><Globe size={15}/>Procesos disponibles</>} items={visible.slice(0,8)} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>
             )}
           </>
@@ -1223,10 +1213,19 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
                   onClick={() => save('draft')}>
                   <Lock size={15}/> Personal
                 </button>
-                <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background: isManagerRole && wsId ? '#7c3aed' : t.primary, color:'#fff', cursor:'pointer' }}
-                  onClick={() => save('published')}>
-                  {isManagerRole && wsId ? <><Lock size={15}/> Publicar privado</> : <><Globe size={15}/> Público</>}
-                </button>
+                {isManagerRole ? (
+                  /* Encargado/Admin → publica directo */
+                  <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background: wsId ? '#7c3aed' : t.primary, color:'#fff', cursor:'pointer' }}
+                    onClick={() => save('published')}>
+                    {wsId ? <><Lock size={15}/> Publicar privado</> : <><Globe size={15}/> Público</>}
+                  </button>
+                ) : (
+                  /* Empleado → queda pendiente hasta que admin apruebe */
+                  <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }}
+                    onClick={() => save('pending')}>
+                    <Send size={15}/> Enviar para aprobación
+                  </button>
+                )}
               </div>
               {/* Empleados en proyecto → Enviar al encargado */}
               {!isManagerRole && memberWs.length > 0 && (
@@ -1545,8 +1544,9 @@ function RoleBadge({ role, t }) {
 // ════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
-function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUser, onSaveArea, onDeleteArea, t }) {
-  const [adminTab, setAdminTab] = useState('users'); // 'users' | 'areas'
+function AdminScreen({ currentUser, users, processes, areas, onBack, onSaveUser, onDeleteUser, onSaveArea, onDeleteArea, onApprove, onReject, t }) {
+  const pendingGeneral = (processes||[]).filter(p => p.status === 'pending' && !p.workspaceId);
+  const [adminTab, setAdminTab] = useState(pendingGeneral.length > 0 ? 'pending' : 'users'); // 'users' | 'areas' | 'pending'
 
   const importRef = useRef(null);
   const [importing, setImporting] = useState(false);
@@ -1651,7 +1651,7 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
         </div>
         {/* Tabs */}
         <div style={{ display:'flex', gap:8, marginTop:16 }}>
-          {[['users','👥 Usuarios'],['areas','🏢 Áreas']].map(([k,label]) => (
+          {[['users','👥 Usuarios'],['areas','🏢 Áreas'],['pending', pendingGeneral.length > 0 ? `⏳ Por aprobar (${pendingGeneral.length})` : '⏳ Por aprobar']].map(([k,label]) => (
             <button key={k} onClick={() => setAdminTab(k)}
               style={{ padding:'8px 18px', borderRadius:20, border:'none', cursor:'pointer', fontWeight:700, fontSize:13,
                 background: adminTab===k ? '#fff' : 'rgba(255,255,255,.2)',
@@ -1728,6 +1728,46 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* Por aprobar tab — procesos de empleados enviados para publicación general */}
+      {adminTab==='pending' && (
+        <div style={{ padding:'0 16px' }}>
+          <div className="section-title">Procesos enviados para aprobación pública</div>
+          {pendingGeneral.length === 0 ? (
+            <div className="empty-state" style={{ padding:'40px 0' }}>
+              <div className="empty-icon"><CheckCircle2 size={28} color={t.primary}/></div>
+              <p style={{ color:t.text, fontWeight:700 }}>Sin pendientes</p>
+              <p style={{ color:t.textMuted, fontSize:13 }}>No hay procesos esperando aprobación</p>
+            </div>
+          ) : pendingGeneral.map(p => {
+            const author = users.find(u => u.id === p.authorId);
+            return (
+              <div key={p.id} className="card" style={{ padding:16, marginBottom:12 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:12 }}>
+                  <div style={{ width:42, height:42, borderRadius:12, background:t.primaryLight, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <FileText size={20} color={t.primary}/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:800, fontSize:15, color:t.text, marginBottom:2 }}>{p.title}</div>
+                    <div style={{ fontSize:12, color:t.textMuted }}>{author?.name || 'Usuario'} · {p.steps?.length || 0} pasos</div>
+                    {p.description && <div style={{ fontSize:13, color:t.textSub, marginTop:4 }}>{p.description}</div>}
+                  </div>
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => onReject(p.id)}
+                    style={{ flex:1, padding:'10px', borderRadius:12, background:t.dangerLight, color:t.danger, border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                    ✕ Rechazar
+                  </button>
+                  <button onClick={() => onApprove(p.id)}
+                    style={{ flex:2, padding:'10px', borderRadius:12, background:t.primary, color:'#fff', border:'none', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                    <Globe size={14}/> Aprobar y publicar
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -2069,9 +2109,11 @@ export default function App() {
     await api.put(`/api/processes/${procId}`, next);
     setProcesses(prev => prev.map(p=>p.id===procId?next:p));
   };
-  const approveProcess = async (procId, visibility = 'private') => {
+  const approveProcess = async (procId) => {
     const updated = processes.find(p=>p.id===procId);
     if (!updated) return;
+    // Si tiene proyecto → privado; si no tiene proyecto (general) → public
+    const visibility = updated.workspaceId ? 'private' : 'general';
     const next = { ...updated, status: 'published', visibility };
     await api.put(`/api/processes/${procId}`, next);
     setProcesses(prev => prev.map(p=>p.id===procId?next:p));
@@ -2121,7 +2163,7 @@ export default function App() {
   // ── View activity
   // ── Admin panel
   if (viewAdmin) return <div style={{ height:'100%', overflow:'hidden', background:t.bg }}>
-    <AdminScreen currentUser={user} users={users} areas={areas} onBack={() => setViewAdmin(false)} onSaveUser={saveUser} onDeleteUser={deleteUser} onSaveArea={saveArea} onDeleteArea={deleteArea} t={t}/>
+    <AdminScreen currentUser={user} users={users} processes={processes} areas={areas} onBack={() => setViewAdmin(false)} onSaveUser={saveUser} onDeleteUser={deleteUser} onSaveArea={saveArea} onDeleteArea={deleteArea} onApprove={id => approveProcess(id)} onReject={id => rejectProcess(id)} t={t}/>
   </div>;
 
   if (viewActivity) {
