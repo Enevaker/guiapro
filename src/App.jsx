@@ -1158,18 +1158,15 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
 
         {error && <div style={{ background:t.dangerLight, color:t.danger, borderRadius:12, padding:'12px 16px', fontSize:14, marginBottom:16, display:'flex', gap:8 }}><AlertCircle size={16}/>{error}</div>}
 
-        {/* Workspace selector — solo para encargados */}
-        {isManagerRole && (
+        {/* Workspace selector — solo encargados creando desde fuera de un proyecto */}
+        {isManagerRole && !defaultWsId && (
           <div style={{ marginBottom:16 }}>
-            <Label>Publicar en</Label>
+            <Label>Publicar en proyecto (opcional)</Label>
             <select value={wsId} onChange={e => setWsId(e.target.value)}
               style={{ backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center', paddingRight:36 }}>
-              <option value="">🌐 General — visible para todos</option>
-              {myWs.map(w => <option key={w.id} value={w.id}>🔒 {w.name} — solo el equipo</option>)}
+              <option value="">— Sin proyecto (Público) —</option>
+              {myWs.map(w => <option key={w.id} value={w.id}>🔒 {w.name}</option>)}
             </select>
-            <p style={{ fontSize:12, color: wsId ? t.secondary : t.textMuted, marginTop:6, display:'flex', alignItems:'center', gap:4 }}>
-              {wsId ? <><Lock size={11}/> Solo los miembros de este proyecto lo verán</> : <><Globe size={11}/> Todos los usuarios podrán verlo</>}
-            </p>
           </div>
         )}
 
@@ -1209,39 +1206,36 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
         <div style={{ marginBottom:16 }}><Label>Notas o tips</Label><textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Consejos o advertencias…" rows={2}/></div>
         <div style={{ marginBottom:28 }}><Label>Etiquetas (separadas por coma)</Label><input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="Ej: caja, cierre, diario"/></div>
 
-        {/* Botones de guardado — todos los roles */}
+        {/* Botones de guardado */}
         <div style={{ display:'flex', flexDirection:'column', gap:10, paddingBottom:16 }}>
 
-          {/* Fila principal: Personal | Público / Privado */}
-          <div style={{ display:'flex', gap:10 }}>
-            {/* Personal (borrador) */}
-            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }}
-              onClick={() => save('draft')}>
-              <Lock size={15}/> Personal
+          {defaultWsId ? (
+            /* ── Dentro de un proyecto: solo un botón ── */
+            <button style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'14px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer', fontSize:15 }}
+              onClick={() => save('published')}>
+              <Check size={17}/> Publicar en proyecto
             </button>
-
-            {/* Público — visible para todos (solo si no hay proyecto seleccionado para encargados) */}
-            {isManagerRole && wsId ? (
-              /* Encargado con proyecto → Publicar privado en proyecto */
-              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:'#7c3aed', color:'#fff', cursor:'pointer' }}
-                onClick={() => save('published')}>
-                <Lock size={15}/> Privado en proyecto
-              </button>
-            ) : (
-              /* Todos → Publicar público/general */
-              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }}
-                onClick={() => save('published')}>
-                <Globe size={15}/> Público
-              </button>
-            )}
-          </div>
-
-          {/* Empleados en proyecto → botón Enviar al encargado */}
-          {!isManagerRole && memberWs.length > 0 && (
-            <button style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.secondary}`, background:'transparent', color:t.secondary, cursor:'pointer' }}
-              onClick={() => { setSendWsId(memberWs[0]?.id || ''); setShowSendModal(true); }}>
-              <Send size={15}/> Enviar al encargado para revisar
-            </button>
+          ) : (
+            /* ── Fuera de proyecto: Personal | Público ── */
+            <>
+              <div style={{ display:'flex', gap:10 }}>
+                <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }}
+                  onClick={() => save('draft')}>
+                  <Lock size={15}/> Personal
+                </button>
+                <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background: isManagerRole && wsId ? '#7c3aed' : t.primary, color:'#fff', cursor:'pointer' }}
+                  onClick={() => save('published')}>
+                  {isManagerRole && wsId ? <><Lock size={15}/> Publicar privado</> : <><Globe size={15}/> Público</>}
+                </button>
+              </div>
+              {/* Empleados en proyecto → Enviar al encargado */}
+              {!isManagerRole && memberWs.length > 0 && (
+                <button style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.secondary}`, background:'transparent', color:t.secondary, cursor:'pointer' }}
+                  onClick={() => { setSendWsId(memberWs[0]?.id || ''); setShowSendModal(true); }}>
+                  <Send size={15}/> Enviar al encargado para revisar
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
