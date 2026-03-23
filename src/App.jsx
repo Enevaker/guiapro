@@ -142,9 +142,13 @@ function Stars({ rating, size = 16, interactive = false, onChange }) {
   );
 }
 
-function Avatar({ name = '?', size = 36, color }) {
+function Avatar({ name = '?', size = 36, color, photo }) {
   const colors = ['#3b6ef6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316'];
   const bg = color || colors[(name.charCodeAt(0)||0) % colors.length];
+  if (photo) return (
+    <img src={photo} alt={name} className="avatar"
+      style={{ width: size, height: size, objectFit:'cover', border:'2px solid rgba(255,255,255,.3)' }}/>
+  );
   return (
     <div className="avatar" style={{ width: size, height: size, background: bg, color: '#fff', fontSize: size * 0.38 }}>
       {name.charAt(0)}
@@ -178,7 +182,7 @@ function ProcessCard({ proc, users, workspaces, onOpen, t, showWs = false }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Avatar name={author.name || '?'} size={22} />
+          <Avatar name={author.name || '?'} size={22} photo={author.photo}/>
           <span style={{ fontSize: 12, color: t.textSub }}>{author.name || 'Anónimo'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -660,7 +664,7 @@ function CreateActivityModal({ ws, processes, users, user, onSave, onClose, t })
                       <div style={{ width:20, height:20, borderRadius:6, border:`2px solid ${selectedMembers.includes(m.id)?t.primary:t.border}`, background:selectedMembers.includes(m.id)?t.primary:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                         {selectedMembers.includes(m.id) && <Check size={12} color="#fff"/>}
                       </div>
-                      <Avatar name={m.name||'?'} size={28}/>
+                      <Avatar name={m.name||'?'} size={28} photo={m.photo}/>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:t.text }}>{m.name}</div>
                         <div style={{ fontSize:11, color:t.textMuted }}>{m.position}</div>
@@ -939,7 +943,7 @@ function WorkspaceDetailScreen({ ws, user, users, processes, workspaces, activit
                       <div onClick={() => onOpenProcess(p.id)} style={{ cursor:'pointer', marginBottom:10 }}>
                         <div style={{ fontWeight:700, fontSize:15, color:t.text, marginBottom:4 }}>{p.title}</div>
                         <div style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, color:t.textMuted }}>
-                          <Avatar name={author.name||'?'} size={18}/>
+                          <Avatar name={author.name||'?'} size={18} photo={author.photo}/>
                           <span>Enviado por {author.name||'?'}</span>
                         </div>
                       </div>
@@ -990,7 +994,7 @@ function WorkspaceDetailScreen({ ws, user, users, processes, workspaces, activit
           <div className="card" style={{ padding:16 }}>
             {/* Manager */}
             <div className="member-row">
-              <Avatar name={manager.name||'?'} size={40}/>
+              <Avatar name={manager.name||'?'} size={40} photo={manager.photo}/>
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:700, color:t.text, fontSize:15 }}>{manager.name}</div>
                 <div style={{ fontSize:12, color:t.textMuted }}>{manager.position} · {manager.area}</div>
@@ -1001,7 +1005,7 @@ function WorkspaceDetailScreen({ ws, user, users, processes, workspaces, activit
             {members.length === 0 && !isManager && <p style={{ color:t.textMuted, fontSize:13, padding:'12px 0', textAlign:'center' }}>Solo está el encargado por ahora</p>}
             {members.map(m => (
               <div key={m.id} className="member-row">
-                <Avatar name={m.name||'?'} size={40}/>
+                <Avatar name={m.name||'?'} size={40} photo={m.photo}/>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700, color:t.text, fontSize:15 }}>{m.name}</div>
                   <div style={{ fontSize:12, color:t.textMuted }}>{m.position} · {m.area}</div>
@@ -1309,7 +1313,7 @@ function ProcessView({ proc, user, users, workspaces, onBack, onEdit, onDelete, 
           {proc.description && <p style={{ fontSize:14, color:t.textSub, lineHeight:1.6, marginBottom:12 }}>{proc.description}</p>}
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <Avatar name={author.name||'?'} size={30}/>
+              <Avatar name={author.name||'?'} size={30} photo={author.photo}/>
               <div><div style={{ fontSize:13, fontWeight:700, color:t.text }}>{author.name||'Anónimo'}</div><div style={{ fontSize:11, color:t.textMuted }}>{fmt(proc.createdAt)}</div></div>
             </div>
             <div style={{ display:'flex', gap:12 }}>
@@ -1601,7 +1605,7 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
               <div className="card" style={{ padding:'0 16px' }}>
                 {members.map((u, i) => (
                   <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom: i<members.length-1?`1px solid ${t.border}`:'none' }}>
-                    <Avatar name={u.name} size={40}/>
+                    <Avatar name={u.name} size={40} photo={u.photo}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:700, fontSize:14, color:t.text }}>{u.name} {u.id===currentUser.id&&<span style={{ fontSize:11, color:t.textMuted }}>(tú)</span>}</div>
                       <div style={{ fontSize:12, color:t.textMuted }}>{u.email}</div>
@@ -1710,17 +1714,37 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
 // ════════════════════════════════════════════════════════════
 // PROFILE
 // ════════════════════════════════════════════════════════════
-function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkToggle, darkMode, onOpenAdmin, t }) {
+function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkToggle, darkMode, onOpenAdmin, onUpdateUser, t }) {
   const mine = processes.filter(p => p.authorId===user.id && p.status==='published');
   const myWsCount = workspaces.filter(w => w.managerId===user.id || w.memberIds?.includes(user.id)).length;
   const isAdmin = user.role === 'admin';
+  const fileRef = useRef(null);
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target.result;
+      onUpdateUser({ ...user, photo: base64 });
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
       <div style={{ padding:'56px 16px 0' }}>
         <h2 style={{ fontSize:22, fontWeight:800, marginBottom:24, color:t.text }}>Perfil</h2>
         <div className="card" style={{ padding:24, marginBottom:16, textAlign:'center' }}>
-          <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}><Avatar name={user.name} size={72}/></div>
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}>
+            <div style={{ position:'relative', display:'inline-block', cursor:'pointer' }} onClick={() => fileRef.current?.click()}>
+              <Avatar name={user.name} size={80} photo={user.photo}/>
+              <div style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:t.primary, display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${t.bg}` }}>
+                <span style={{ color:'#fff', fontSize:14 }}>📷</span>
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handlePhotoChange}/>
+          </div>
           <h3 style={{ fontSize:20, fontWeight:800, color:t.text, marginBottom:4 }}>{user.name}</h3>
           <p style={{ fontSize:14, color:t.textSub, marginBottom:2 }}>{user.position}</p>
           <p style={{ fontSize:13, color:t.textMuted }}>{user.area}</p>
@@ -1853,6 +1877,7 @@ export default function App() {
   const handleLogout = () => { storage.set('gp_session',null); setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); setViewAdmin(false); };
   const saveUser = (u) => { setUsers(prev => prev.find(x=>x.id===u.id) ? prev.map(x=>x.id===u.id?u:x) : [...prev,u]); };
   const deleteUser = (id) => { setUsers(prev => prev.filter(u=>u.id!==id)); };
+  const updateCurrentUser = (u) => { setUser(u); setUsers(prev => prev.map(x => x.id===u.id ? u : x)); };
 
   // Processes CRUD
   const saveProcess = (proc) => {
@@ -1991,7 +2016,7 @@ export default function App() {
         {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
         {tab==='workspaces' && <WorkspacesScreen user={user} workspaces={workspaces} processes={processes} users={users} onOpenWs={openWs} onCreateWs={() => setCreatingWs(true)} t={t}/>}
         {tab==='mine'       && <MyProcessesScreen user={user} processes={processes} users={users} workspaces={workspaces} onOpen={openProcess} onEdit={editProcess} onSubmit={submitProcess} t={t}/>}
-        {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
+        {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} onUpdateUser={updateCurrentUser} t={t}/>}
       </div>
 
       {tab !== 'profile' && tab !== 'workspaces' && (
