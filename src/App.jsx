@@ -279,7 +279,7 @@ function AuthScreen({ onAuth, t }) {
 // ════════════════════════════════════════════════════════════
 // HOME
 // ════════════════════════════════════════════════════════════
-function HomeScreen({ user, processes, users, workspaces, activities, onOpen, onOpenActivity, onCreateNew, t }) {
+function HomeScreen({ user, processes, users, workspaces, activities, onOpen, onOpenActivity, onCreateNew, onOpenAdmin, t }) {
   const [search, setSearch] = useState('');
 
   // processes visible to user: public ones + workspace ones where user is member/manager
@@ -310,9 +310,27 @@ function HomeScreen({ user, processes, users, workspaces, activities, onOpen, on
   return (
     <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
       <div style={{ background:`linear-gradient(135deg,${t.primary} 0%,${t.primaryDark} 100%)`, padding:'52px 20px 32px', borderRadius:'0 0 28px 28px' }}>
-        <p style={{ color:'rgba(255,255,255,.75)', fontSize:14, marginBottom:2 }}>Hola,</p>
-        <h2 style={{ color:'#fff', fontSize:24, fontWeight:800, marginBottom:2 }}>{user.name.split(' ')[0]} 👋</h2>
-        <p style={{ color:'rgba(255,255,255,.65)', fontSize:13, marginBottom:20 }}>{user.position} · {user.area}</p>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:2 }}>
+          <div>
+            <p style={{ color:'rgba(255,255,255,.75)', fontSize:14, marginBottom:2 }}>Hola,</p>
+            <h2 style={{ color:'#fff', fontSize:24, fontWeight:800, marginBottom:4 }}>{user.name.split(' ')[0]} 👋</h2>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+              <span style={{ color:'rgba(255,255,255,.65)', fontSize:13 }}>{user.position}{user.area ? ` · ${user.area}` : ''}</span>
+            </div>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:5, background:'rgba(255,255,255,.2)', borderRadius:20, padding:'3px 10px' }}>
+              <span style={{ fontSize:12 }}>{ROLES[user.role||'employee']?.emoji}</span>
+              <span style={{ color:'#fff', fontSize:11, fontWeight:700 }}>{ROLES[user.role||'employee']?.label}</span>
+            </div>
+          </div>
+          {user.role === 'admin' && (
+            <button onClick={onOpenAdmin}
+              style={{ background:'rgba(255,255,255,.2)', border:'2px solid rgba(255,255,255,.4)', borderRadius:14, padding:'10px 14px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3, minWidth:64 }}>
+              <span style={{ fontSize:20 }}>👑</span>
+              <span style={{ color:'#fff', fontSize:10, fontWeight:700, lineHeight:1.2, textAlign:'center' }}>Panel Admin</span>
+            </button>
+          )}
+        </div>
+        <div style={{ height:16 }}/>
         <div style={{ background:'rgba(255,255,255,.15)', backdropFilter:'blur(10px)', border:'1.5px solid rgba(255,255,255,.25)', borderRadius:14, display:'flex', alignItems:'center', gap:10, padding:'11px 14px' }}>
           <Search size={18} color="rgba(255,255,255,.8)"/>
           <input style={{ background:'transparent', border:'none', outline:'none', color:'#fff', fontSize:15, flex:1 }} placeholder="Buscar procesos…" value={search} onChange={e => setSearch(e.target.value)}/>
@@ -1687,14 +1705,23 @@ export default function App() {
   const t = darkMode ? DARK : LIGHT;
   useEffect(() => { injectStyles(t); }, [t]);
 
-  // Seed admin si no hay usuarios registrados
+  // Seed admin y auto-corregir si ya existe con datos viejos
   const [users, setUsers] = useState(() => {
-    const stored = storage.get('gp_users', []);
+    let stored = storage.get('gp_users', []);
+    const adminBase = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Administrador', area: 'General', role: 'admin' };
     if (stored.length === 0) {
-      const admin = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Administrador', area: 'General', role: 'admin', createdAt: new Date().toISOString() };
+      const admin = { ...adminBase, createdAt: new Date().toISOString() };
       storage.set('gp_users', [admin]);
       return [admin];
     }
+    // Asegurar que el admin tenga role:'admin' y position correcta
+    const idx = stored.findIndex(u => u.id === 'admin-001' || u.email === 'admin@guiapro.com');
+    if (idx === -1) {
+      stored = [...stored, { ...adminBase, createdAt: new Date().toISOString() }];
+    } else {
+      stored = stored.map((u, i) => i === idx ? { ...u, role: 'admin', position: u.position === 'Encargado' ? 'Administrador' : u.position } : u);
+    }
+    storage.set('gp_users', stored);
     return stored;
   });
   const [user, setUser] = useState(() => { const sid=storage.get('gp_session'); return sid ? storage.get('gp_users',[]).find(u=>u.id===sid)||null : null; });
@@ -1865,7 +1892,7 @@ export default function App() {
   return (
     <div style={{ height:'100%', overflow:'hidden', background:t.bg }}>
       <div style={{ height:'100%', overflow:'hidden' }}>
-        {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} t={t}/>}
+        {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
         {tab==='workspaces' && <WorkspacesScreen user={user} workspaces={workspaces} processes={processes} users={users} onOpenWs={openWs} onCreateWs={() => setCreatingWs(true)} t={t}/>}
         {tab==='mine'       && <MyProcessesScreen user={user} processes={processes} users={users} workspaces={workspaces} onOpen={openProcess} onEdit={editProcess} onSubmit={submitProcess} t={t}/>}
         {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
