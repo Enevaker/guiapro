@@ -59,6 +59,18 @@ const toActivity = r => r ? ({
   completions:toJ(r[8],[]), createdAt:r[9]
 }) : null;
 
+// ── Asegurar admin siempre existe ─────────────────────────────────────────────
+function ensureAdmin() {
+  const adminRow = qOne(`SELECT id FROM users WHERE id='admin-001'`);
+  if (!adminRow) {
+    run(`INSERT INTO users VALUES (?,?,?,?,?,?,?,?,?)`,
+      ['admin-001','Administrador','admin@guiapro.com','Admin2024!','Administrador','General','admin',null, new Date().toISOString()]);
+  } else {
+    run(`UPDATE users SET role='admin', name='Administrador', email='admin@guiapro.com', password='Admin2024!' WHERE id='admin-001'`);
+  }
+  saveDB();
+}
+
 // ── Auth middleware ────────────────────────────────────────────────────────────
 function auth(req, res, next) {
   const token = (req.headers.authorization||'').split(' ')[1];
@@ -100,17 +112,7 @@ async function initDB() {
 
   run(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`);
 
-  // Admin seed
-  const adminRow = qOne(`SELECT id FROM users WHERE id='admin-001'`);
-  if (!adminRow) {
-    run(`INSERT INTO users VALUES (?,?,?,?,?,?,?,?,?)`,
-      ['admin-001','Administrador','admin@guiapro.com','Admin2024!','Administrador','General','admin',null, new Date().toISOString()]);
-    saveDB();
-  } else {
-    // Asegurar role admin
-    run(`UPDATE users SET role='admin' WHERE id='admin-001'`);
-    saveDB();
-  }
+  ensureAdmin();
 
   // Areas por defecto
   const areasRow = qOne(`SELECT value FROM settings WHERE key='areas'`);
@@ -331,17 +333,15 @@ app.post('/api/admin/import-db', auth,
     const userRow = qOne(`SELECT role FROM users WHERE id=?`, [req.userId]);
     if (!userRow || userRow[0] !== 'admin') return res.status(403).json({ error:'Solo el administrador puede importar la base de datos' });
     try {
-      // Guardar backup de la BD actual por si acaso
       const backupPath = DB_PATH + '.bak';
       if (existsSync(DB_PATH)) writeFileSync(backupPath, readFileSync(DB_PATH));
-      // Escribir nueva BD
       writeFileSync(DB_PATH, req.body);
-      // Recargar en memoria
       const SQL = await initSqlJs({ locateFile: f => join(__dirname, 'node_modules', 'sql.js', 'dist', f) });
       db = new SQL.Database(readFileSync(DB_PATH));
+      // Siempre asegurar que el admin exista después de importar
+      ensureAdmin();
       res.json({ ok:true, message:'Base de datos importada correctamente' });
     } catch(e) {
-      // Restaurar backup si falla
       const backupPath = DB_PATH + '.bak';
       if (existsSync(backupPath)) { writeFileSync(DB_PATH, readFileSync(backupPath)); }
       res.status(400).json({ error:'Archivo inválido: ' + e.message });
