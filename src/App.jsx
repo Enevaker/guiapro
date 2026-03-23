@@ -282,11 +282,14 @@ function AuthScreen({ onAuth, t }) {
 function HomeScreen({ user, processes, users, workspaces, activities, onOpen, onOpenActivity, onCreateNew, onOpenAdmin, t }) {
   const [search, setSearch] = useState('');
 
-  // processes visible to user: public ones + workspace ones where user is member/manager
+  // processes visible to user: general ones (visible to all) + private workspace ones where user is member/manager
   const myWsIds = workspaces.filter(w => w.managerId === user.id || w.memberIds?.includes(user.id)).map(w => w.id);
-  const visible = processes.filter(p =>
-    p.status === 'published' && (!p.workspaceId || myWsIds.includes(p.workspaceId))
-  );
+  const visible = processes.filter(p => {
+    if (p.status !== 'published') return false;
+    if (!p.visibility || p.visibility === 'general') return true; // general → visible para todos
+    // private → solo miembros del proyecto
+    return p.workspaceId && myWsIds.includes(p.workspaceId);
+  });
 
   const isSearching = search.trim().length >= 2;
   const searchResults = isSearching ? visible.filter(p => {
@@ -924,9 +927,10 @@ function WorkspaceDetailScreen({ ws, user, users, processes, workspaces, activit
                           <span>Enviado por {author.name||'?'}</span>
                         </div>
                       </div>
-                      <div style={{ display:'flex', gap:8 }}>
-                        <button onClick={() => onReject(p.id)} style={{ flex:1, padding:'8px', borderRadius:10, background:t.dangerLight, color:t.danger, border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>✕ Rechazar</button>
-                        <button onClick={() => onApprove(p.id)} style={{ flex:2, padding:'8px', borderRadius:10, background:t.secondaryLight, color:t.secondary, border:'none', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}><CheckCircle2 size={14}/> Publicar al equipo</button>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button onClick={() => onReject(p.id)} style={{ flex:1, padding:'8px', borderRadius:10, background:t.dangerLight, color:t.danger, border:'none', fontWeight:700, fontSize:12, cursor:'pointer' }}>✕ Rechazar</button>
+                        <button onClick={() => onApprove(p.id,'private')} style={{ flex:1.5, padding:'8px', borderRadius:10, background:t.secondaryLight, color:t.secondary, border:`1.5px solid ${t.secondary}`, fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><Lock size={12}/> Privado</button>
+                        <button onClick={() => onApprove(p.id,'general')} style={{ flex:1.5, padding:'8px', borderRadius:10, background:t.secondary, color:'#fff', border:'none', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><Globe size={12}/> General</button>
                       </div>
                     </div>
                   );
@@ -1073,11 +1077,15 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
   const [error, setError] = useState('');
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOver, setDragOver] = useState(null);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [sendWsId, setSendWsId] = useState('');
 
   const pub = processes.filter(p => p.status === 'published');
   const existingAreas = [...new Set(pub.map(p => p.area).filter(Boolean))].sort();
   const existingCats  = [...new Set(pub.map(p => p.category).filter(Boolean))].sort();
   const myWs = workspaces.filter(w => w.managerId === user.id);
+  const memberWs = workspaces.filter(w => w.memberIds?.includes(user.id) && w.managerId !== user.id);
+  const isManagerRole = ['admin','supervisor','manager'].includes(user.role) && myWs.length > 0;
 
   const addStep = () => setSteps(s => [...s, { id: uid(), text:'' }]);
   const removeStep = idx => setSteps(s => s.filter((_,i) => i !== idx));
@@ -1091,17 +1099,20 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
     setSteps(ns); setDragIdx(null); setDragOver(null);
   };
 
-  const save = (status) => {
+  const save = (status, visibility = 'general', overrideWsId) => {
     setError('');
     if (!title.trim()) { setError('El título es obligatorio'); return; }
     if (!steps.some(s => s.text.trim())) { setError('Agrega al menos un paso'); return; }
+    if (status === 'published' && visibility === 'private' && !wsId) {
+      setError('Selecciona un proyecto para publicar en privado'); return;
+    }
     const proc = {
       id: ex?.id || uid(),
       title: title.trim(), description: desc.trim(), area: area.trim(), category: cat.trim(),
       steps: steps.filter(s => s.text.trim()),
       notes: notes.trim(),
       tags: tagsInput.split(',').map(tg => tg.trim()).filter(Boolean),
-      status, workspaceId: wsId || null,
+      status, visibility, workspaceId: overrideWsId !== undefined ? overrideWsId : (wsId || null),
       authorId: user.id,
       createdAt: ex?.createdAt || now(), updatedAt: now(),
       likes: ex?.likes||[], ratings: ex?.ratings||[], comments: ex?.comments||[], views: ex?.views||0,
@@ -1168,15 +1179,56 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
         <div style={{ marginBottom:16 }}><Label>Notas o tips</Label><textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Consejos o advertencias…" rows={2}/></div>
         <div style={{ marginBottom:28 }}><Label>Etiquetas (separadas por coma)</Label><input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="Ej: caja, cierre, diario"/></div>
 
-        <div style={{ display:'flex', gap:10, paddingBottom:16 }}>
-          <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }} onClick={() => save('draft')}>
-            <Save size={16}/> Borrador
-          </button>
-          <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }} onClick={() => save('published')}>
-            <Globe size={16}/> Publicar
-          </button>
-        </div>
+        {isManagerRole ? (
+          /* ENCARGADO: Borrador | Privado | General */
+          <div style={{ display:'flex', gap:8, paddingBottom:16 }}>
+            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer', fontSize:13 }} onClick={() => save('draft')}>
+              <Save size={15}/> Borrador
+            </button>
+            <button style={{ flex:1.3, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.secondary}`, background:t.secondaryLight, color:t.secondary, cursor:'pointer', fontSize:13 }} onClick={() => save('published','private')}>
+              <Lock size={15}/> Privado
+            </button>
+            <button style={{ flex:1.3, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer', fontSize:13 }} onClick={() => save('published','general')}>
+              <Globe size={15}/> General
+            </button>
+          </div>
+        ) : (
+          /* EMPLEADO: Borrador | Enviar al encargado */
+          <div style={{ display:'flex', gap:10, paddingBottom:16 }}>
+            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }} onClick={() => save('draft')}>
+              <Save size={16}/> Borrador
+            </button>
+            {memberWs.length > 0 && (
+              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.secondary, color:'#fff', cursor:'pointer' }}
+                onClick={() => { setSendWsId(memberWs[0]?.id || ''); setShowSendModal(true); }}>
+                <Send size={16}/> Enviar al encargado
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Modal enviar al encargado (empleado) */}
+      {showSendModal && (
+        <div className="modal-backdrop" onClick={() => setShowSendModal(false)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-handle"/>
+            <h3 style={{ fontSize:17, fontWeight:800, color:t.text, marginBottom:6 }}>Enviar al encargado</h3>
+            <p style={{ fontSize:13, color:t.textSub, marginBottom:16 }}>El encargado revisará tu guía y decidirá si la publica para el equipo.</p>
+            <label style={{ fontSize:13, fontWeight:700, color:t.textSub, display:'block', marginBottom:6 }}>Selecciona el proyecto</label>
+            <select value={sendWsId} onChange={e => setSendWsId(e.target.value)} style={{ marginBottom:20 }}>
+              {memberWs.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+            </select>
+            <div style={{ display:'flex', gap:10 }}>
+              <button style={{ flex:1, padding:'12px', borderRadius:12, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }} onClick={() => setShowSendModal(false)}>Cancelar</button>
+              <button style={{ flex:2, padding:'12px', borderRadius:12, background:t.secondary, color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
+                onClick={() => { save('pending','private',sendWsId); setShowSendModal(false); }}>
+                <Send size={16}/> Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1807,8 +1859,8 @@ export default function App() {
   const submitProcess = (procId, wsId) => {
     setProcesses(prev => prev.map(p => p.id === procId ? { ...p, workspaceId: wsId, status: 'pending' } : p));
   };
-  const approveProcess = (procId) => {
-    setProcesses(prev => prev.map(p => p.id === procId ? { ...p, status: 'published' } : p));
+  const approveProcess = (procId, visibility = 'private') => {
+    setProcesses(prev => prev.map(p => p.id === procId ? { ...p, status: 'published', visibility } : p));
   };
   const rejectProcess = (procId) => {
     setProcesses(prev => prev.map(p => p.id === procId ? { ...p, workspaceId: null, status: 'draft' } : p));
