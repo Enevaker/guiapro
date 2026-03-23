@@ -939,10 +939,9 @@ function WorkspaceDetailScreen({ ws, user, users, processes, workspaces, activit
                           <span>Enviado por {author.name||'?'}</span>
                         </div>
                       </div>
-                      <div style={{ display:'flex', gap:6 }}>
-                        <button onClick={() => onReject(p.id)} style={{ flex:1, padding:'8px', borderRadius:10, background:t.dangerLight, color:t.danger, border:'none', fontWeight:700, fontSize:12, cursor:'pointer' }}>✕ Rechazar</button>
-                        <button onClick={() => onApprove(p.id,'private')} style={{ flex:1.5, padding:'8px', borderRadius:10, background:t.secondaryLight, color:t.secondary, border:`1.5px solid ${t.secondary}`, fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><Lock size={12}/> Privado</button>
-                        <button onClick={() => onApprove(p.id,'general')} style={{ flex:1.5, padding:'8px', borderRadius:10, background:t.secondary, color:'#fff', border:'none', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:4 }}><Globe size={12}/> General</button>
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button onClick={() => onReject(p.id)} style={{ flex:1, padding:'8px', borderRadius:10, background:t.dangerLight, color:t.danger, border:'none', fontWeight:700, fontSize:13, cursor:'pointer' }}>✕ Rechazar</button>
+                        <button onClick={() => onApprove(p.id,'private')} style={{ flex:2, padding:'8px', borderRadius:10, background:t.secondaryLight, color:t.secondary, border:'none', fontWeight:700, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}><CheckCircle2 size={14}/> Publicar en proyecto</button>
                       </div>
                     </div>
                   );
@@ -1111,20 +1110,20 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
     setSteps(ns); setDragIdx(null); setDragOver(null);
   };
 
-  const save = (status, visibility = 'general', overrideWsId) => {
+  const save = (status, overrideWsId) => {
     setError('');
     if (!title.trim()) { setError('El título es obligatorio'); return; }
     if (!steps.some(s => s.text.trim())) { setError('Agrega al menos un paso'); return; }
-    if (status === 'published' && visibility === 'private' && !wsId) {
-      setError('Selecciona un proyecto para publicar en privado'); return;
-    }
+    const finalWsId = overrideWsId !== undefined ? overrideWsId : (wsId || null);
+    // Visibilidad automática: si tiene proyecto → privado, si no → general
+    const visibility = finalWsId ? 'private' : 'general';
     const proc = {
       id: ex?.id || uid(),
       title: title.trim(), description: desc.trim(), area: area.trim(), category: cat.trim(),
       steps: steps.filter(s => s.text.trim()),
       notes: notes.trim(),
       tags: tagsInput.split(',').map(tg => tg.trim()).filter(Boolean),
-      status, visibility, workspaceId: overrideWsId !== undefined ? overrideWsId : (wsId || null),
+      status, visibility, workspaceId: finalWsId,
       authorId: user.id,
       createdAt: ex?.createdAt || now(), updatedAt: now(),
       likes: ex?.likes||[], ratings: ex?.ratings||[], comments: ex?.comments||[], views: ex?.views||0,
@@ -1144,16 +1143,20 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
 
         {error && <div style={{ background:t.dangerLight, color:t.danger, borderRadius:12, padding:'12px 16px', fontSize:14, marginBottom:16, display:'flex', gap:8 }}><AlertCircle size={16}/>{error}</div>}
 
-        {/* Workspace selector */}
-        <div style={{ marginBottom:16 }}>
-          <Label>Proyecto</Label>
-          <select value={wsId} onChange={e => setWsId(e.target.value)}
-            style={{ backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center', paddingRight:36 }}>
-            <option value="">🌐 Público (visible para todos)</option>
-            {myWs.map(w => <option key={w.id} value={w.id}>🏢 {w.name}</option>)}
-          </select>
-          {wsId && <p style={{ fontSize:12, color:t.textMuted, marginTop:6, display:'flex', alignItems:'center', gap:4 }}><Lock size={11}/> Solo los miembros del proyecto podrán verlo</p>}
-        </div>
+        {/* Workspace selector — solo para encargados */}
+        {isManagerRole && (
+          <div style={{ marginBottom:16 }}>
+            <Label>Publicar en</Label>
+            <select value={wsId} onChange={e => setWsId(e.target.value)}
+              style={{ backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center', paddingRight:36 }}>
+              <option value="">🌐 General — visible para todos</option>
+              {myWs.map(w => <option key={w.id} value={w.id}>🔒 {w.name} — solo el equipo</option>)}
+            </select>
+            <p style={{ fontSize:12, color: wsId ? t.secondary : t.textMuted, marginTop:6, display:'flex', alignItems:'center', gap:4 }}>
+              {wsId ? <><Lock size={11}/> Solo los miembros de este proyecto lo verán</> : <><Globe size={11}/> Todos los usuarios podrán verlo</>}
+            </p>
+          </div>
+        )}
 
         <div style={{ marginBottom:16 }}><Label>Título del proceso *</Label><input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: Cómo realizar un cierre de caja"/></div>
         <div style={{ marginBottom:16 }}><Label>¿Para qué sirve?</Label><textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Describe el objetivo del proceso…" rows={3}/></div>
@@ -1192,16 +1195,13 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
         <div style={{ marginBottom:28 }}><Label>Etiquetas (separadas por coma)</Label><input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="Ej: caja, cierre, diario"/></div>
 
         {isManagerRole ? (
-          /* ENCARGADO: Borrador | Privado | General */
-          <div style={{ display:'flex', gap:8, paddingBottom:16 }}>
-            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer', fontSize:13 }} onClick={() => save('draft')}>
-              <Save size={15}/> Borrador
+          /* ENCARGADO: Borrador | Publicar (visibilidad auto según proyecto) */
+          <div style={{ display:'flex', gap:10, paddingBottom:16 }}>
+            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }} onClick={() => save('draft')}>
+              <Save size={16}/> Borrador
             </button>
-            <button style={{ flex:1.3, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.secondary}`, background:t.secondaryLight, color:t.secondary, cursor:'pointer', fontSize:13 }} onClick={() => save('published','private')}>
-              <Lock size={15}/> Privado
-            </button>
-            <button style={{ flex:1.3, display:'flex', alignItems:'center', justifyContent:'center', gap:5, padding:'13px 8px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer', fontSize:13 }} onClick={() => save('published','general')}>
-              <Globe size={15}/> General
+            <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }} onClick={() => save('published')}>
+              {wsId ? <><Lock size={16}/> Publicar en proyecto</> : <><Globe size={16}/> Publicar general</>}
             </button>
           </div>
         ) : (
@@ -1234,7 +1234,7 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
             <div style={{ display:'flex', gap:10 }}>
               <button style={{ flex:1, padding:'12px', borderRadius:12, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }} onClick={() => setShowSendModal(false)}>Cancelar</button>
               <button style={{ flex:2, padding:'12px', borderRadius:12, background:t.secondary, color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}
-                onClick={() => { save('pending','private',sendWsId); setShowSendModal(false); }}>
+                onClick={() => { save('pending',sendWsId); setShowSendModal(false); }}>
                 <Send size={16}/> Enviar
               </button>
             </div>
