@@ -318,12 +318,36 @@ app.put('/api/areas', auth, (req, res) => {
 app.get('/api/admin/download-db', auth, (req, res) => {
   const userRow = qOne(`SELECT role FROM users WHERE id=?`, [req.userId]);
   if (!userRow || userRow[0] !== 'admin') return res.status(403).json({ error:'Solo el administrador puede descargar la base de datos' });
-  saveDB(); // Asegurar que está actualizada
+  saveDB();
   const date = new Date().toISOString().slice(0,10);
   res.setHeader('Content-Disposition', `attachment; filename="guiapro-backup-${date}.db"`);
   res.setHeader('Content-Type', 'application/octet-stream');
   res.sendFile(DB_PATH);
 });
+
+app.post('/api/admin/import-db', auth,
+  express.raw({ type:'application/octet-stream', limit:'100mb' }),
+  async (req, res) => {
+    const userRow = qOne(`SELECT role FROM users WHERE id=?`, [req.userId]);
+    if (!userRow || userRow[0] !== 'admin') return res.status(403).json({ error:'Solo el administrador puede importar la base de datos' });
+    try {
+      // Guardar backup de la BD actual por si acaso
+      const backupPath = DB_PATH + '.bak';
+      if (existsSync(DB_PATH)) writeFileSync(backupPath, readFileSync(DB_PATH));
+      // Escribir nueva BD
+      writeFileSync(DB_PATH, req.body);
+      // Recargar en memoria
+      const SQL = await initSqlJs({ locateFile: f => join(__dirname, 'node_modules', 'sql.js', 'dist', f) });
+      db = new SQL.Database(readFileSync(DB_PATH));
+      res.json({ ok:true, message:'Base de datos importada correctamente' });
+    } catch(e) {
+      // Restaurar backup si falla
+      const backupPath = DB_PATH + '.bak';
+      if (existsSync(backupPath)) { writeFileSync(DB_PATH, readFileSync(backupPath)); }
+      res.status(400).json({ error:'Archivo inválido: ' + e.message });
+    }
+  }
+);
 
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')));

@@ -1548,6 +1548,9 @@ function RoleBadge({ role, t }) {
 function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUser, onSaveArea, onDeleteArea, t }) {
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'areas'
 
+  const importRef = useRef(null);
+  const [importing, setImporting] = useState(false);
+
   const downloadDB = async () => {
     try {
       const token = localStorage.getItem('gp_token');
@@ -1561,6 +1564,27 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
       a.click();
       URL.revokeObjectURL(url);
     } catch { alert('Error de conexión al descargar'); }
+  };
+
+  const importDB = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.db')) { alert('Selecciona un archivo .db válido'); return; }
+    if (!window.confirm(`¿Importar "${file.name}"?\n\nEsto reemplazará TODOS los datos actuales. Se creará un respaldo automático.`)) return;
+    setImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const token = localStorage.getItem('gp_token');
+      const res = await fetch('/api/admin/import-db', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/octet-stream' },
+        body: buffer,
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('Error: ' + data.error); }
+      else { alert('✅ Base de datos importada. La página se recargará.'); location.reload(); }
+    } catch { alert('Error de conexión al importar'); }
+    finally { setImporting(false); e.target.value = ''; }
   };
   const [showCreate, setShowCreate] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -1613,10 +1637,17 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
             <h2 style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:4 }}>Panel de administración</h2>
             <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} · {areas.length} área{areas.length!==1?'s':''}</p>
           </div>
-          <button onClick={downloadDB}
-            style={{ background:'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', borderRadius:12, padding:'8px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, color:'#fff', fontWeight:700, fontSize:12 }}>
-            💾 Exportar BD
-          </button>
+          <div style={{ display:'flex', gap:8 }}>
+            <button onClick={downloadDB}
+              style={{ background:'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', borderRadius:12, padding:'8px 12px', cursor:'pointer', display:'flex', alignItems:'center', gap:5, color:'#fff', fontWeight:700, fontSize:12 }}>
+              💾 Exportar
+            </button>
+            <button onClick={() => importRef.current?.click()} disabled={importing}
+              style={{ background: importing ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', borderRadius:12, padding:'8px 12px', cursor: importing ? 'default':'pointer', display:'flex', alignItems:'center', gap:5, color:'#fff', fontWeight:700, fontSize:12, opacity: importing ? 0.6 : 1 }}>
+              {importing ? '⏳ Importando…' : '📂 Importar'}
+            </button>
+            <input ref={importRef} type="file" accept=".db" style={{ display:'none' }} onChange={importDB}/>
+          </div>
         </div>
         {/* Tabs */}
         <div style={{ display:'flex', gap:8, marginTop:16 }}>
