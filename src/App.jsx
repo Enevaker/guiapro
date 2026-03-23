@@ -1547,6 +1547,21 @@ function RoleBadge({ role, t }) {
 // ════════════════════════════════════════════════════════════
 function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUser, onSaveArea, onDeleteArea, t }) {
   const [adminTab, setAdminTab] = useState('users'); // 'users' | 'areas'
+
+  const downloadDB = async () => {
+    try {
+      const token = localStorage.getItem('gp_token');
+      const res = await fetch('/api/admin/download-db', { headers:{ 'Authorization': `Bearer ${token}` } });
+      if (!res.ok) { alert('Error al descargar la base de datos'); return; }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `guiapro-backup-${new Date().toISOString().slice(0,10)}.db`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { alert('Error de conexión al descargar'); }
+  };
   const [showCreate, setShowCreate] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState({ name:'', email:'', password:'', position:'', area:'', role:'employee' });
@@ -1593,8 +1608,16 @@ function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUs
             </button>
           )}
         </div>
-        <h2 style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:4 }}>Panel de administración</h2>
-        <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} · {areas.length} área{areas.length!==1?'s':''}</p>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div>
+            <h2 style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:4 }}>Panel de administración</h2>
+            <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} · {areas.length} área{areas.length!==1?'s':''}</p>
+          </div>
+          <button onClick={downloadDB}
+            style={{ background:'rgba(255,255,255,.15)', border:'1.5px solid rgba(255,255,255,.3)', borderRadius:12, padding:'8px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, color:'#fff', fontWeight:700, fontSize:12 }}>
+            💾 Exportar BD
+          </button>
+        </div>
         {/* Tabs */}
         <div style={{ display:'flex', gap:8, marginTop:16 }}>
           {[['users','👥 Usuarios'],['areas','🏢 Áreas']].map(([k,label]) => (

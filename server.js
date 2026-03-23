@@ -312,6 +312,19 @@ app.put('/api/areas', auth, (req, res) => {
   res.json({ ok:true });
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// DESCARGA BD (solo admin)
+// ══════════════════════════════════════════════════════════════════════════════
+app.get('/api/admin/download-db', auth, (req, res) => {
+  const userRow = qOne(`SELECT role FROM users WHERE id=?`, [req.userId]);
+  if (!userRow || userRow[0] !== 'admin') return res.status(403).json({ error:'Solo el administrador puede descargar la base de datos' });
+  saveDB(); // Asegurar que está actualizada
+  const date = new Date().toISOString().slice(0,10);
+  res.setHeader('Content-Disposition', `attachment; filename="guiapro-backup-${date}.db"`);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.sendFile(DB_PATH);
+});
+
 // ── SPA fallback ──────────────────────────────────────────────────────────────
 app.get('*', (req, res) => res.sendFile(join(__dirname, 'dist', 'index.html')));
 
