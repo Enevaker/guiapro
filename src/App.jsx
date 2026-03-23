@@ -1727,13 +1727,29 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
   const isAdmin = user.role === 'admin';
   const fileRef = useRef(null);
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadingPhoto(true);
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const base64 = ev.target.result;
-      onUpdateUser({ ...user, photo: base64 });
+      const img = new Image();
+      img.onload = () => {
+        // Comprimir a máx 300x300px
+        const MAX = 300;
+        const scale = Math.min(MAX / img.width, MAX / img.height, 1);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', 0.82);
+        onUpdateUser({ ...user, photo: compressed }).finally(() => setUploadingPhoto(false));
+      };
+      img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   };
@@ -1744,13 +1760,19 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
         <h2 style={{ fontSize:22, fontWeight:800, marginBottom:24, color:t.text }}>Perfil</h2>
         <div className="card" style={{ padding:24, marginBottom:16, textAlign:'center' }}>
           <div style={{ display:'flex', justifyContent:'center', marginBottom:12 }}>
-            <div style={{ position:'relative', display:'inline-block', cursor:'pointer' }} onClick={() => fileRef.current?.click()}>
+            <div style={{ position:'relative', display:'inline-block', cursor: uploadingPhoto ? 'default' : 'pointer' }}
+              onClick={() => !uploadingPhoto && fileRef.current?.click()}>
               <Avatar name={user.name} size={80} photo={user.photo}/>
-              <div style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:t.primary, display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${t.bg}` }}>
-                <span style={{ color:'#fff', fontSize:14 }}>📷</span>
-              </div>
+              {uploadingPhoto
+                ? <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <span className="pulse" style={{ color:'#fff', fontSize:11, fontWeight:700 }}>Guardando…</span>
+                  </div>
+                : <div style={{ position:'absolute', bottom:0, right:0, width:26, height:26, borderRadius:'50%', background:t.primary, display:'flex', alignItems:'center', justifyContent:'center', border:`2px solid ${t.bg}` }}>
+                    <span style={{ color:'#fff', fontSize:14 }}>📷</span>
+                  </div>
+              }
             </div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={handlePhotoChange}/>
+            <input ref={fileRef} type="file" accept="image/*" capture="user" style={{ display:'none' }} onChange={handlePhotoChange}/>
           </div>
           <h3 style={{ fontSize:20, fontWeight:800, color:t.text, marginBottom:4 }}>{user.name}</h3>
           <p style={{ fontSize:14, color:t.textSub, marginBottom:2 }}>{user.position}</p>
