@@ -298,11 +298,20 @@ function HomeScreen({ user, processes, users, workspaces, activities, onOpen, on
       p.tags?.some(tg => tg.toLowerCase().includes(q)) || p.area?.toLowerCase().includes(q);
   }) : [];
 
-  // IDs de los encargados de mis proyectos
+  // IDs de todos los encargados/managers del sistema
+  const allManagerIds = new Set(users.filter(u => ['admin','supervisor','manager'].includes(u.role)).map(u => u.id));
+  // IDs de encargados de MIS proyectos (para procesos privados)
   const myWsManagerIds = new Set(workspaces.filter(w => myWsIds.includes(w.id)).map(w => w.managerId));
   const myArea = visible.filter(p => p.area?.toLowerCase() === user.area?.toLowerCase()).slice(0, 5);
-  // Recién agregados: solo procesos publicados por encargados
-  const recent = [...visible].filter(p => myWsManagerIds.has(p.authorId)).sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0, 5);
+  // Recién agregados:
+  //   - 'general' publicado por cualquier encargado → visible para todos
+  //   - 'private' publicado por encargado de MIS proyectos → solo yo (y el equipo)
+  const recent = [...visible].filter(p => {
+    const byManager = allManagerIds.has(p.authorId) || myWsManagerIds.has(p.authorId);
+    if (!byManager) return false;
+    if (!p.visibility || p.visibility === 'general') return true;
+    return myWsManagerIds.has(p.authorId);
+  }).sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt)).slice(0, 8);
   const pendingActivities = (activities || []).filter(a => {
     if (!myWsIds.includes(a.workspaceId)) return false;
     const assigned = a.assignedTo === 'all' || (Array.isArray(a.assignedTo) && a.assignedTo.includes(user.id));
@@ -380,8 +389,11 @@ function HomeScreen({ user, processes, users, workspaces, activities, onOpen, on
                 })}
               </div>
             )}
-            {myArea.length > 0 && <Section title={<><Layers size={15}/>Procesos de tu área</>} items={myArea} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>}
             {recent.length > 0  && <Section title={<><Clock size={15}/>Recién agregados</>} items={recent} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>}
+            {myArea.length > 0 && <Section title={<><Layers size={15}/>Procesos de tu área</>} items={myArea} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>}
+            {recent.length === 0 && myArea.length === 0 && visible.length > 0 && (
+              <Section title={<><Globe size={15}/>Procesos disponibles</>} items={visible.slice(0,8)} users={users} workspaces={workspaces} onOpen={onOpen} t={t}/>
+            )}
           </>
         )}
       </div>
