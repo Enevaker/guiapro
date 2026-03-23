@@ -1443,15 +1443,17 @@ function RoleBadge({ role, t }) {
 // ════════════════════════════════════════════════════════════
 // ADMIN PANEL
 // ════════════════════════════════════════════════════════════
-function AdminScreen({ currentUser, users, onBack, onSaveUser, onDeleteUser, t }) {
+function AdminScreen({ currentUser, users, areas, onBack, onSaveUser, onDeleteUser, onSaveArea, onDeleteArea, t }) {
+  const [adminTab, setAdminTab] = useState('users'); // 'users' | 'areas'
   const [showCreate, setShowCreate] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState({ name:'', email:'', password:'', position:'', area:'', role:'employee' });
   const [error, setError] = useState('');
+  const [newAreaName, setNewAreaName] = useState('');
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}));
 
-  const openCreate = () => { setForm({ name:'', email:'', password:'', position:'', area:'', role:'employee' }); setEditingUser(null); setError(''); setShowCreate(true); };
-  const openEdit = (u) => { setForm({ name:u.name, email:u.email, password:u.password, position:u.position, area:u.area, role:u.role||'employee' }); setEditingUser(u); setError(''); setShowCreate(true); };
+  const openCreate = () => { setForm({ name:'', email:'', password:'', position:'', area: areas[0]||'', role:'employee' }); setEditingUser(null); setError(''); setShowCreate(true); };
+  const openEdit = (u) => { setForm({ name:u.name, email:u.email, password:u.password, position:u.position||'', area:u.area||'', role:u.role||'employee' }); setEditingUser(u); setError(''); setShowCreate(true); };
 
   const save = () => {
     setError('');
@@ -1469,48 +1471,109 @@ function AdminScreen({ currentUser, users, onBack, onSaveUser, onDeleteUser, t }
     setShowCreate(false);
   };
 
+  const addArea = () => { if(newAreaName.trim()) { onSaveArea(newAreaName); setNewAreaName(''); } };
+
   const grouped = Object.keys(ROLES).map(role => ({ role, members: users.filter(u => (u.role||'employee') === role) })).filter(g => g.members.length > 0);
 
   const Lbl = ({ children }) => <label style={{ fontSize:13, fontWeight:700, color:t.textSub, display:'block', marginBottom:6 }}>{children}</label>;
 
   return (
     <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
-      <div style={{ background:`linear-gradient(135deg,${t.purple} 0%,#6d28d9 100%)`, padding:'52px 20px 24px', borderRadius:'0 0 28px 28px', marginBottom:20 }}>
+      {/* Header */}
+      <div style={{ background:`linear-gradient(135deg,${t.purple} 0%,#6d28d9 100%)`, padding:'52px 20px 20px', borderRadius:'0 0 28px 28px', marginBottom:20 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
           <button onClick={onBack} style={{ background:'rgba(255,255,255,.2)', border:'none', borderRadius:12, padding:8, cursor:'pointer', display:'flex' }}>
             <ArrowLeft size={20} color="#fff"/>
           </button>
-          <button onClick={openCreate} style={{ background:'rgba(255,255,255,.2)', border:'none', borderRadius:12, padding:'8px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, color:'#fff', fontWeight:700, fontSize:13 }}>
-            <Plus size={16}/> Nuevo usuario
-          </button>
+          {adminTab==='users' && (
+            <button onClick={openCreate} style={{ background:'rgba(255,255,255,.2)', border:'none', borderRadius:12, padding:'8px 16px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, color:'#fff', fontWeight:700, fontSize:13 }}>
+              <Plus size={16}/> Nuevo usuario
+            </button>
+          )}
         </div>
         <h2 style={{ color:'#fff', fontSize:22, fontWeight:800, marginBottom:4 }}>Panel de administración</h2>
-        <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} registrado{users.length!==1?'s':''}</p>
+        <p style={{ color:'rgba(255,255,255,.75)', fontSize:13 }}>{users.length} usuario{users.length!==1?'s':''} · {areas.length} área{areas.length!==1?'s':''}</p>
+        {/* Tabs */}
+        <div style={{ display:'flex', gap:8, marginTop:16 }}>
+          {[['users','👥 Usuarios'],['areas','🏢 Áreas']].map(([k,label]) => (
+            <button key={k} onClick={() => setAdminTab(k)}
+              style={{ padding:'8px 18px', borderRadius:20, border:'none', cursor:'pointer', fontWeight:700, fontSize:13,
+                background: adminTab===k ? '#fff' : 'rgba(255,255,255,.2)',
+                color: adminTab===k ? t.purple : '#fff' }}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div style={{ padding:'0 16px' }}>
-        {grouped.map(({ role, members }) => (
-          <div key={role} style={{ marginBottom:24 }}>
-            <div className="section-title"><RoleBadge role={role} t={t}/></div>
-            <div className="card" style={{ padding:'0 16px' }}>
-              {members.map((u, i) => (
-                <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom: i<members.length-1?`1px solid ${t.border}`:'none' }}>
-                  <Avatar name={u.name} size={40}/>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:700, fontSize:14, color:t.text }}>{u.name} {u.id===currentUser.id&&<span style={{ fontSize:11, color:t.textMuted }}>(tú)</span>}</div>
-                    <div style={{ fontSize:12, color:t.textMuted }}>{u.email}</div>
-                    <div style={{ fontSize:11, color:t.textMuted }}>{u.position} · {u.area}</div>
+      {/* Usuarios tab */}
+      {adminTab==='users' && (
+        <div style={{ padding:'0 16px' }}>
+          {grouped.map(({ role, members }) => (
+            <div key={role} style={{ marginBottom:24 }}>
+              <div className="section-title"><RoleBadge role={role} t={t}/></div>
+              <div className="card" style={{ padding:'0 16px' }}>
+                {members.map((u, i) => (
+                  <div key={u.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom: i<members.length-1?`1px solid ${t.border}`:'none' }}>
+                    <Avatar name={u.name} size={40}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:t.text }}>{u.name} {u.id===currentUser.id&&<span style={{ fontSize:11, color:t.textMuted }}>(tú)</span>}</div>
+                      <div style={{ fontSize:12, color:t.textMuted }}>{u.email}</div>
+                      <div style={{ fontSize:11, color:t.textMuted }}>{u.position}{u.area ? ` · ${u.area}` : ''}</div>
+                    </div>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button onClick={() => openEdit(u)} style={{ background:t.primaryLight, color:t.primary, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Edit3 size={13}/></button>
+                      {u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} style={{ background:t.dangerLight, color:t.danger, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Trash2 size={13}/></button>}
+                    </div>
                   </div>
-                  <div style={{ display:'flex', gap:6 }}>
-                    <button onClick={() => openEdit(u)} style={{ background:t.primaryLight, color:t.primary, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Edit3 size={13}/></button>
-                    {u.id !== currentUser.id && <button onClick={() => onDeleteUser(u.id)} style={{ background:t.dangerLight, color:t.danger, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer', fontSize:12, fontWeight:700 }}><Trash2 size={13}/></button>}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+          ))}
+          {grouped.length === 0 && <div style={{ textAlign:'center', color:t.textMuted, padding:40 }}>No hay usuarios aún</div>}
+        </div>
+      )}
+
+      {/* Áreas tab */}
+      {adminTab==='areas' && (
+        <div style={{ padding:'0 16px' }}>
+          <div className="section-title">Áreas registradas</div>
+          {/* Agregar nueva área */}
+          <div className="card" style={{ padding:16, marginBottom:20 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:t.textSub, marginBottom:10 }}>Nueva área</div>
+            <div style={{ display:'flex', gap:10 }}>
+              <input type="text" value={newAreaName} onChange={e => setNewAreaName(e.target.value)}
+                onKeyDown={e => e.key==='Enter' && addArea()}
+                placeholder="Ej: Logística, Soporte..."
+                style={{ flex:1 }}/>
+              <button onClick={addArea}
+                style={{ padding:'10px 16px', borderRadius:12, background:t.purple, color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', gap:6 }}>
+                <Plus size={16}/>
+              </button>
             </div>
           </div>
-        ))}
-      </div>
+          {/* Lista de áreas */}
+          <div className="card" style={{ padding:'0 16px' }}>
+            {areas.length === 0 && <div style={{ padding:20, color:t.textMuted, textAlign:'center', fontSize:13 }}>Sin áreas registradas</div>}
+            {areas.map((area, i) => {
+              const count = users.filter(u => u.area === area).length;
+              return (
+                <div key={area} style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 0', borderBottom: i<areas.length-1?`1px solid ${t.border}`:'none' }}>
+                  <div style={{ width:40, height:40, borderRadius:12, background:t.primaryLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>🏢</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:t.text }}>{area}</div>
+                    <div style={{ fontSize:12, color:t.textMuted }}>{count} usuario{count!==1?'s':''}</div>
+                  </div>
+                  <button onClick={() => onDeleteArea(area)}
+                    style={{ background:t.dangerLight, color:t.danger, border:'none', borderRadius:8, padding:'6px 10px', cursor:'pointer' }}>
+                    <Trash2 size={13}/>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Modal crear/editar usuario */}
       {showCreate && (
@@ -1521,7 +1584,14 @@ function AdminScreen({ currentUser, users, onBack, onSaveUser, onDeleteUser, t }
             <div style={{ marginBottom:12 }}><Lbl>Nombre completo *</Lbl><input type="text" value={form.name} onChange={set('name')} placeholder="Nombre"/></div>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
               <div><Lbl>Puesto *</Lbl><input type="text" value={form.position} onChange={set('position')} placeholder="Puesto"/></div>
-              <div><Lbl>Área *</Lbl><input type="text" value={form.area} onChange={set('area')} placeholder="Área"/></div>
+              <div>
+                <Lbl>Área *</Lbl>
+                <select value={form.area} onChange={set('area')}
+                  style={{ width:'100%', padding:'10px 12px', borderRadius:12, border:`1.5px solid ${t.border}`, background:t.card, color:t.text, fontSize:14, cursor:'pointer' }}>
+                  <option value="">— Selecciona —</option>
+                  {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
             </div>
             <div style={{ marginBottom:12 }}><Lbl>Correo *</Lbl><input type="email" value={form.email} onChange={set('email')} placeholder="correo@empresa.com" disabled={!!editingUser} style={{ opacity: editingUser?0.6:1 }}/></div>
             <div style={{ marginBottom:12 }}><Lbl>{editingUser ? 'Nueva contraseña (dejar en blanco para no cambiar)' : 'Contraseña *'}</Lbl><input type="password" value={form.password} onChange={set('password')} placeholder={editingUser ? 'Sin cambios' : '••••••••'}/></div>
@@ -1631,6 +1701,7 @@ export default function App() {
   const [processes, setProcesses]   = useState(() => storage.get('gp_processes', []));
   const [workspaces, setWorkspaces] = useState(() => storage.get('gp_workspaces', []));
   const [activities, setActivities] = useState(() => storage.get('gp_activities', []));
+  const [areas, setAreas]           = useState(() => storage.get('gp_areas', ['General','Operaciones','Recursos Humanos','Finanzas','Tecnología','Ventas','Marketing']));
   const [viewActivity, setViewActivity] = useState(null);
 
   const [tab, setTab]               = useState('home');
@@ -1650,6 +1721,10 @@ export default function App() {
   useEffect(() => { storage.set('gp_workspaces', workspaces); }, [workspaces]);
   useEffect(() => { storage.set('gp_dark', darkMode); }, [darkMode]);
   useEffect(() => { storage.set('gp_activities', activities); }, [activities]);
+  useEffect(() => { storage.set('gp_areas', areas); }, [areas]);
+
+  const saveArea   = (name) => { const n = name.trim(); if(n && !areas.includes(n)) setAreas(prev => [...prev, n]); };
+  const deleteArea = (name) => { setAreas(prev => prev.filter(a => a !== name)); };
 
   const handleAuth = (u) => { storage.set('gp_session', u.id); setUser(u); setUsers(storage.get('gp_users',[])); };
   const handleLogout = () => { storage.set('gp_session',null); setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); setViewAdmin(false); };
@@ -1727,7 +1802,7 @@ export default function App() {
   // ── View activity
   // ── Admin panel
   if (viewAdmin) return <div style={{ height:'100%', overflow:'hidden', background:t.bg }}>
-    <AdminScreen currentUser={user} users={users} onBack={() => setViewAdmin(false)} onSaveUser={saveUser} onDeleteUser={deleteUser} t={t}/>
+    <AdminScreen currentUser={user} users={users} areas={areas} onBack={() => setViewAdmin(false)} onSaveUser={saveUser} onDeleteUser={deleteUser} onSaveArea={saveArea} onDeleteArea={deleteArea} t={t}/>
   </div>;
 
   if (viewActivity) {
