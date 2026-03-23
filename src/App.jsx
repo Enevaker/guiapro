@@ -1814,6 +1814,34 @@ export default function App() {
   useEffect(() => { storage.set('gp_activities', activities); }, [activities]);
   useEffect(() => { storage.set('gp_areas', areas); }, [areas]);
 
+  // ── Botón atrás del móvil: manejar navegación interna
+  const navRef = useRef({});
+  navRef.current = { viewAdmin, viewProc, creating, creatingWs, viewWs, viewActivity, tab };
+
+  useEffect(() => {
+    // Siempre mantener un estado extra en el historial para interceptar el botón atrás
+    window.history.pushState({ guiapro: true }, '');
+
+    const handlePop = () => {
+      const s = navRef.current;
+      // Volver a agregar el estado para que el siguiente "atrás" también se intercepte
+      window.history.pushState({ guiapro: true }, '');
+      // Cerrar la pantalla activa en orden de prioridad
+      if (s.viewAdmin)    { setViewAdmin(false);   return; }
+      if (s.viewActivity) { setViewActivity(null); return; }
+      if (s.viewProc)     { setViewProc(null);     return; }
+      if (s.creating)     { setCreating(false); setEditProc(null); setCreateProcWsId(null); return; }
+      if (s.creatingWs)   { setCreatingWs(false); setEditingWs(null); return; }
+      if (s.viewWs)       { setViewWs(null);       return; }
+      // En pantalla principal: ir a Inicio si no estamos ahí
+      if (s.tab !== 'home') { setTab('home'); }
+      // Si ya estamos en Inicio, no hacer nada (no salir del app)
+    };
+
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []); // Solo al montar
+
   const saveArea   = (name) => { const n = name.trim(); if(n && !areas.includes(n)) setAreas(prev => [...prev, n]); };
   const deleteArea = (name) => { setAreas(prev => prev.filter(a => a !== name)); };
 
