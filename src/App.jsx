@@ -1209,30 +1209,41 @@ function CreateScreen({ user, processes, workspaces, onSave, onCancel, editProc,
         <div style={{ marginBottom:16 }}><Label>Notas o tips</Label><textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Consejos o advertencias…" rows={2}/></div>
         <div style={{ marginBottom:28 }}><Label>Etiquetas (separadas por coma)</Label><input type="text" value={tagsInput} onChange={e => setTagsInput(e.target.value)} placeholder="Ej: caja, cierre, diario"/></div>
 
-        {isManagerRole ? (
-          /* ENCARGADO: Borrador | Publicar (visibilidad auto según proyecto) */
-          <div style={{ display:'flex', gap:10, paddingBottom:16 }}>
-            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }} onClick={() => save('draft')}>
-              <Save size={16}/> Borrador
+        {/* Botones de guardado — todos los roles */}
+        <div style={{ display:'flex', flexDirection:'column', gap:10, paddingBottom:16 }}>
+
+          {/* Fila principal: Personal | Público / Privado */}
+          <div style={{ display:'flex', gap:10 }}>
+            {/* Personal (borrador) */}
+            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }}
+              onClick={() => save('draft')}>
+              <Lock size={15}/> Personal
             </button>
-            <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }} onClick={() => save('published')}>
-              {wsId ? <><Lock size={16}/> Publicar en proyecto</> : <><Globe size={16}/> Publicar general</>}
-            </button>
-          </div>
-        ) : (
-          /* EMPLEADO: Borrador | Enviar al encargado */
-          <div style={{ display:'flex', gap:10, paddingBottom:16 }}>
-            <button style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1px solid ${t.border}`, background:t.cardAlt, color:t.textSub, cursor:'pointer' }} onClick={() => save('draft')}>
-              <Save size={16}/> Borrador
-            </button>
-            {memberWs.length > 0 && (
-              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.secondary, color:'#fff', cursor:'pointer' }}
-                onClick={() => { setSendWsId(memberWs[0]?.id || ''); setShowSendModal(true); }}>
-                <Send size={16}/> Enviar al encargado
+
+            {/* Público — visible para todos (solo si no hay proyecto seleccionado para encargados) */}
+            {isManagerRole && wsId ? (
+              /* Encargado con proyecto → Publicar privado en proyecto */
+              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:'#7c3aed', color:'#fff', cursor:'pointer' }}
+                onClick={() => save('published')}>
+                <Lock size={15}/> Privado en proyecto
+              </button>
+            ) : (
+              /* Todos → Publicar público/general */
+              <button style={{ flex:2, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:'none', background:t.primary, color:'#fff', cursor:'pointer' }}
+                onClick={() => save('published')}>
+                <Globe size={15}/> Público
               </button>
             )}
           </div>
-        )}
+
+          {/* Empleados en proyecto → botón Enviar al encargado */}
+          {!isManagerRole && memberWs.length > 0 && (
+            <button style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'13px', borderRadius:12, fontWeight:700, border:`1.5px solid ${t.secondary}`, background:'transparent', color:t.secondary, cursor:'pointer' }}
+              onClick={() => { setSendWsId(memberWs[0]?.id || ''); setShowSendModal(true); }}>
+              <Send size={15}/> Enviar al encargado para revisar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Modal enviar al encargado (empleado) */}
@@ -1314,7 +1325,7 @@ function ProcessView({ proc, user, users, workspaces, onBack, onEdit, onDelete, 
             {ws && <span className="chip" style={{ background:ws.color+'22', color:ws.color }}><Briefcase size={10}/> {ws.name}</span>}
             {proc.area && <span className="chip" style={{ background:t.primaryLight, color:t.primary }}>{proc.area}</span>}
             {proc.category && <span className="chip" style={{ background:t.secondaryLight, color:t.secondary }}>{proc.category}</span>}
-            {proc.status==='draft' && <span className="chip" style={{ background:t.dangerLight, color:t.danger }}>Borrador</span>}
+            {proc.status==='draft' && <span className="chip" style={{ background:t.dangerLight, color:t.danger }}>🔒 Personal</span>}
           </div>
           <h1 style={{ fontSize:20, fontWeight:800, color:t.text, marginBottom:8, lineHeight:1.35 }}>{proc.title}</h1>
           {proc.description && <p style={{ fontSize:14, color:t.textSub, lineHeight:1.6, marginBottom:12 }}>{proc.description}</p>}
@@ -1487,7 +1498,7 @@ function MyProcessesScreen({ user, processes, users, workspaces, onOpen, onEdit,
 
             {personal.length > 0 && <>
               <div className="section-title" style={{ marginTop:8 }}>Personales ({personal.length})</div>
-              <p style={{ fontSize:12, color:t.textMuted, marginBottom:10 }}>Solo tú puedes verlos. Puedes enviarlos al encargado para que los publique a tu equipo.</p>
+              <p style={{ fontSize:12, color:t.textMuted, marginBottom:10 }}>Solo tú puedes verlos. Puedes publicarlos como <strong>Público</strong> o enviarlos al encargado.</p>
               {personal.map(p => <ProcRow key={p.id} p={p} badge="🔒 Personal" badgeStyle={{ background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}` }} actions={<>
                 {memberWs.length > 0 && <button onClick={e => { e.stopPropagation(); openSend(p); }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:10, background:t.secondaryLight, color:t.secondary, border:'none', fontWeight:700, fontSize:12, cursor:'pointer' }}><Send size={13}/> Enviar</button>}
                 <button onClick={e => { e.stopPropagation(); onEdit(p.id); }} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:10, background:t.primaryLight, color:t.primary, border:'none', fontWeight:700, fontSize:12, cursor:'pointer' }}><Edit3 size={13}/> Editar</button>
