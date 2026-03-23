@@ -14,6 +14,9 @@ dist-ssr
 # Claude Code (desarrollo local)
 .claude/
 
+# Base de datos SQLite (se crea en el servidor)
+guiapro.db
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -8,14 +8,29 @@ import {
   FolderOpen, ChevronDown, Hash, Briefcase, ClipboardList
 } from 'lucide-react';
 
-// ─── Storage ──────────────────────────────────────────────────────────────────
+// ─── Storage (solo para preferencias locales) ─────────────────────────────────
 const storage = {
-  get: (key, def = null) => {
-    try { const v = window.localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
+  get: (key, def = null) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; } },
+  set: (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
+// ─── API helper ───────────────────────────────────────────────────────────────
+const TOKEN_KEY = 'gp_token';
+const api = {
+  _onUnauth: null,
+  _req: async (path, opts = {}) => {
+    const token = localStorage.getItem(TOKEN_KEY) || '';
+    const res = await fetch(path, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) },
+    });
+    if (res.status === 401) { api._onUnauth?.(); return {}; }
+    return res.json();
   },
-  set: (key, val) => {
-    try { window.localStorage.setItem(key, JSON.stringify(val)); } catch {}
-  },
+  get:  (p)    => api._req(p),
+  post: (p, b) => api._req(p, { method: 'POST', body: JSON.stringify(b) }),
+  put:  (p, b) => api._req(p, { method: 'PUT',  body: JSON.stringify(b) }),
+  del:  (p)    => api._req(p, { method: 'DELETE' }),
 };
 
 const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -204,25 +219,17 @@ function AuthScreen({ onAuth, t }) {
   const [loading, setLoading] = useState(false);
   const set = k => e => setForm(f => ({...f, [k]: e.target.value}));
 
-  const submit = () => {
+  const submit = async () => {
     setError('');
     if (mode === 'register') {
       if (!form.name.trim()||!form.email.trim()||!form.password.trim()||!form.position.trim()||!form.area.trim()) { setError('Completa todos los campos'); return; }
       if (form.password.length < 6) { setError('Contraseña mínimo 6 caracteres'); return; }
-      const users = storage.get('gp_users', []);
-      if (users.find(u => u.email.toLowerCase() === form.email.toLowerCase())) { setError('Correo ya registrado'); return; }
-      const user = { id: uid(), name: form.name.trim(), email: form.email.toLowerCase().trim(), password: form.password, position: form.position.trim(), area: form.area.trim(), role: 'employee', createdAt: now() };
-      storage.set('gp_users', [...users, user]);
-      setLoading(true);
-      setTimeout(() => { setLoading(false); onAuth(user); }, 500);
     } else {
       if (!form.email.trim()||!form.password.trim()) { setError('Ingresa correo y contraseña'); return; }
-      const users = storage.get('gp_users', []);
-      const user = users.find(u => u.email.toLowerCase() === form.email.toLowerCase().trim() && u.password === form.password);
-      if (!user) { setError('Correo o contraseña incorrectos'); return; }
-      setLoading(true);
-      setTimeout(() => { setLoading(false); onAuth(user); }, 400);
     }
+    setLoading(true);
+    const err = await onAuth(form, mode);
+    if (err) { setError(err); setLoading(false); }
   };
 
   return (
@@ -1793,54 +1800,55 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
 // MAIN APP
 // ════════════════════════════════════════════════════════════
 export default function App() {
-  const [darkMode, setDarkMode]     = useState(() => storage.get('gp_dark', false));
+  const [darkMode, setDarkMode] = useState(() => storage.get('gp_dark', false));
   const t = darkMode ? DARK : LIGHT;
   useEffect(() => { injectStyles(t); }, [t]);
+  useEffect(() => { storage.set('gp_dark', darkMode); }, [darkMode]);
 
-  // Seed admin y auto-corregir si ya existe con datos viejos
-  const [users, setUsers] = useState(() => {
-    let stored = storage.get('gp_users', []);
-    const adminBase = { id: 'admin-001', name: 'Administrador', email: 'admin@guiapro.com', password: 'Admin2024!', position: 'Administrador', area: 'General', role: 'admin' };
-    if (stored.length === 0) {
-      const admin = { ...adminBase, createdAt: new Date().toISOString() };
-      storage.set('gp_users', [admin]);
-      return [admin];
-    }
-    // Asegurar que el admin tenga role:'admin' y position correcta
-    const idx = stored.findIndex(u => u.id === 'admin-001' || u.email === 'admin@guiapro.com');
-    if (idx === -1) {
-      stored = [...stored, { ...adminBase, createdAt: new Date().toISOString() }];
-    } else {
-      stored = stored.map((u, i) => i === idx ? { ...u, role: 'admin', position: u.position === 'Encargado' ? 'Administrador' : u.position } : u);
-    }
-    storage.set('gp_users', stored);
-    return stored;
-  });
-  const [user, setUser] = useState(() => { const sid=storage.get('gp_session'); return sid ? storage.get('gp_users',[]).find(u=>u.id===sid)||null : null; });
-  const [processes, setProcesses]   = useState(() => storage.get('gp_processes', []));
-  const [workspaces, setWorkspaces] = useState(() => storage.get('gp_workspaces', []));
-  const [activities, setActivities] = useState(() => storage.get('gp_activities', []));
-  const [areas, setAreas]           = useState(() => storage.get('gp_areas', ['General','Operaciones','Recursos Humanos','Finanzas','Tecnología','Ventas','Marketing']));
+  // ── Estado ────────────────────────────────────────────────────────────────
+  const [appLoading, setAppLoading] = useState(true);
+  const [user,       setUser]       = useState(null);
+  const [users,      setUsers]      = useState([]);
+  const [processes,  setProcesses]  = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [areas,      setAreas]      = useState(['General','Operaciones','Recursos Humanos','Finanzas','Tecnología','Ventas','Marketing']);
   const [viewActivity, setViewActivity] = useState(null);
 
-  const [tab, setTab]               = useState('home');
-  const [viewAdmin, setViewAdmin]   = useState(false);
-  const [viewProc, setViewProc]     = useState(null);
-  const [editProc, setEditProc]     = useState(null);
-  const [creating, setCreating]     = useState(false);
-  const [createProcWsId, setCreateProcWsId] = useState(null); // pre-select workspace when creating from ws detail
+  const [tab,             setTab]             = useState('home');
+  const [viewAdmin,       setViewAdmin]       = useState(false);
+  const [viewProc,        setViewProc]        = useState(null);
+  const [editProc,        setEditProc]        = useState(null);
+  const [creating,        setCreating]        = useState(false);
+  const [createProcWsId,  setCreateProcWsId]  = useState(null);
+  const [viewWs,          setViewWs]          = useState(null);
+  const [editingWs,       setEditingWs]       = useState(null);
+  const [creatingWs,      setCreatingWs]      = useState(false);
+  const [joinWs,          setJoinWs]          = useState(null);
 
-  const [viewWs, setViewWs]         = useState(null); // workspace detail
-  const [editingWs, setEditingWs]   = useState(null); // workspace being edited
-  const [creatingWs, setCreatingWs] = useState(false);
-  const [joinWs, setJoinWs]         = useState(null); // workspace to join (modal)
+  // ── Cargar todos los datos del servidor ───────────────────────────────────
+  const loadAll = async () => {
+    const [u, p, w, a, ar] = await Promise.all([
+      api.get('/api/users'), api.get('/api/processes'),
+      api.get('/api/workspaces'), api.get('/api/activities'), api.get('/api/areas'),
+    ]);
+    if (Array.isArray(u)) setUsers(u);
+    if (Array.isArray(p)) setProcesses(p);
+    if (Array.isArray(w)) setWorkspaces(w);
+    if (Array.isArray(a)) setActivities(a);
+    if (Array.isArray(ar)) setAreas(ar);
+  };
 
-  useEffect(() => { storage.set('gp_processes', processes); }, [processes]);
-  useEffect(() => { storage.set('gp_users', users); }, [users]);
-  useEffect(() => { storage.set('gp_workspaces', workspaces); }, [workspaces]);
-  useEffect(() => { storage.set('gp_dark', darkMode); }, [darkMode]);
-  useEffect(() => { storage.set('gp_activities', activities); }, [activities]);
-  useEffect(() => { storage.set('gp_areas', areas); }, [areas]);
+  // ── Al montar: verificar sesión guardada ──────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) { setAppLoading(false); return; }
+    api.get('/api/auth/me').then(async (u) => {
+      if (u?.id) { setUser(u); await loadAll(); }
+      setAppLoading(false);
+    }).catch(() => { localStorage.removeItem(TOKEN_KEY); setAppLoading(false); });
+    api._onUnauth = () => { localStorage.removeItem(TOKEN_KEY); setUser(null); setTab('home'); };
+  }, []);
 
   // ── Botón atrás del móvil: manejar navegación interna
   const navRef = useRef({});
@@ -1870,41 +1878,90 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePop);
   }, []); // Solo al montar
 
-  const saveArea   = (name) => { const n = name.trim(); if(n && !areas.includes(n)) setAreas(prev => [...prev, n]); };
-  const deleteArea = (name) => { setAreas(prev => prev.filter(a => a !== name)); };
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  const handleAuth = async (form, mode) => {
+    const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const res = await fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(form) });
+    const data = await res.json();
+    if (data.error) return data.error;
+    localStorage.setItem(TOKEN_KEY, data.token);
+    setUser(data.user);
+    await loadAll();
+    return null;
+  };
+  const handleLogout = async () => {
+    await api.post('/api/auth/logout', {}).catch(()=>{});
+    localStorage.removeItem(TOKEN_KEY);
+    setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); setViewAdmin(false);
+  };
 
-  const handleAuth = (u) => { storage.set('gp_session', u.id); setUser(u); setUsers(storage.get('gp_users',[])); };
-  const handleLogout = () => { storage.set('gp_session',null); setUser(null); setTab('home'); setViewProc(null); setCreating(false); setViewWs(null); setViewActivity(null); setViewAdmin(false); };
-  const saveUser = (u) => { setUsers(prev => prev.find(x=>x.id===u.id) ? prev.map(x=>x.id===u.id?u:x) : [...prev,u]); };
-  const deleteUser = (id) => { setUsers(prev => prev.filter(u=>u.id!==id)); };
-  const updateCurrentUser = (u) => { setUser(u); setUsers(prev => prev.map(x => x.id===u.id ? u : x)); };
+  // ── Usuarios ──────────────────────────────────────────────────────────────
+  const saveUser = async (u) => {
+    const exists = users.find(x=>x.id===u.id);
+    if (exists) await api.put(`/api/users/${u.id}`, u);
+    else await api.post('/api/users', u);
+    setUsers(prev => exists ? prev.map(x=>x.id===u.id?u:x) : [...prev,u]);
+  };
+  const deleteUser = async (id) => {
+    await api.del(`/api/users/${id}`);
+    setUsers(prev => prev.filter(u=>u.id!==id));
+  };
+  const updateCurrentUser = async (u) => {
+    await api.put(`/api/users/${u.id}`, u);
+    setUser(u); setUsers(prev => prev.map(x=>x.id===u.id?u:x));
+  };
 
-  // Processes CRUD
-  const saveProcess = (proc) => {
-    setProcesses(prev => prev.find(p=>p.id===proc.id) ? prev.map(p=>p.id===proc.id?proc:p) : [...prev,proc]);
+  // ── Áreas ─────────────────────────────────────────────────────────────────
+  const saveArea = async (name) => {
+    const n = name.trim();
+    if (!n || areas.includes(n)) return;
+    const next = [...areas, n];
+    setAreas(next); await api.put('/api/areas', next);
+  };
+  const deleteArea = async (name) => {
+    const next = areas.filter(a => a !== name);
+    setAreas(next); await api.put('/api/areas', next);
+  };
+
+  // ── Procesos ──────────────────────────────────────────────────────────────
+  const saveProcess = async (proc) => {
+    const exists = processes.find(p=>p.id===proc.id);
+    if (exists) await api.put(`/api/processes/${proc.id}`, proc);
+    else await api.post('/api/processes', proc);
+    setProcesses(prev => exists ? prev.map(p=>p.id===proc.id?proc:p) : [...prev,proc]);
     setCreating(false); setEditProc(null); setCreateProcWsId(null);
     if (proc.workspaceId) { setViewWs(workspaces.find(w=>w.id===proc.workspaceId)||null); setTab('workspaces'); }
     else setTab('mine');
   };
-  const updateProcess = (proc) => { setProcesses(prev => prev.map(p=>p.id===proc.id?proc:p)); setViewProc(proc); };
-  const deleteProcess = (id) => {
+  const updateProcess = async (proc) => {
+    await api.put(`/api/processes/${proc.id}`, proc);
+    setProcesses(prev => prev.map(p=>p.id===proc.id?proc:p)); setViewProc(proc);
+  };
+  const deleteProcess = async (id) => {
     const proc = processes.find(p=>p.id===id);
-    setProcesses(prev => prev.filter(p=>p.id!==id));
-    setViewProc(null);
+    await api.del(`/api/processes/${id}`);
+    setProcesses(prev => prev.filter(p=>p.id!==id)); setViewProc(null);
     if (proc?.workspaceId) { setViewWs(workspaces.find(w=>w.id===proc.workspaceId)||null); setTab('workspaces'); }
     else setTab('mine');
   };
   const openProcess = (id) => { const p=processes.find(pr=>pr.id===id); if(p) setViewProc(p); };
   const editProcess = (id) => { const p=processes.find(pr=>pr.id===id); if(p) { setEditProc(p); setCreating(true); setViewProc(null); } };
 
-  // Workspaces CRUD
-  const saveWorkspace = (ws) => {
-    setWorkspaces(prev => prev.find(w=>w.id===ws.id) ? prev.map(w=>w.id===ws.id?ws:w) : [...prev,ws]);
+  // ── Proyectos ─────────────────────────────────────────────────────────────
+  const saveWorkspace = async (ws) => {
+    const exists = workspaces.find(w=>w.id===ws.id);
+    if (exists) await api.put(`/api/workspaces/${ws.id}`, ws);
+    else await api.post('/api/workspaces', ws);
+    setWorkspaces(prev => exists ? prev.map(w=>w.id===ws.id?ws:w) : [...prev,ws]);
     setCreatingWs(false); setEditingWs(null);
     setViewWs(ws); setTab('workspaces');
   };
-  const updateWs = (ws) => { setWorkspaces(prev => prev.map(w=>w.id===ws.id?ws:w)); setViewWs(ws); };
-  const deleteWs = (id) => {
+  const updateWs = async (ws) => {
+    await api.put(`/api/workspaces/${ws.id}`, ws);
+    setWorkspaces(prev => prev.map(w=>w.id===ws.id?ws:w)); setViewWs(ws);
+  };
+  const deleteWs = async (id) => {
+    await api.del(`/api/workspaces/${id}`);
     setWorkspaces(prev => prev.filter(w=>w.id!==id));
     setProcesses(prev => prev.filter(p=>p.workspaceId!==id));
     setActivities(prev => prev.filter(a=>a.workspaceId!==id));
@@ -1916,34 +1973,67 @@ export default function App() {
     if (action==='join') { setJoinWs(ws); return; }
     setViewWs(ws); setTab('workspaces');
   };
-  const joinWorkspace = () => {
+  const joinWorkspace = async () => {
     if (!joinWs) return;
     const updated = { ...joinWs, memberIds: [...(joinWs.memberIds||[]), user.id] };
-    updateWs(updated);
-    setJoinWs(null);
-    setViewWs(updated); setTab('workspaces');
+    await updateWs(updated);
+    setJoinWs(null); setViewWs(updated); setTab('workspaces');
   };
 
-  // Process submission flow (employee → manager)
-  const submitProcess = (procId, wsId) => {
-    setProcesses(prev => prev.map(p => p.id === procId ? { ...p, workspaceId: wsId, status: 'pending' } : p));
+  // ── Flujo empleado → encargado ────────────────────────────────────────────
+  const submitProcess = async (procId, wsId) => {
+    const updated = processes.find(p=>p.id===procId);
+    if (!updated) return;
+    const next = { ...updated, workspaceId: wsId, status: 'pending' };
+    await api.put(`/api/processes/${procId}`, next);
+    setProcesses(prev => prev.map(p=>p.id===procId?next:p));
   };
-  const approveProcess = (procId, visibility = 'private') => {
-    setProcesses(prev => prev.map(p => p.id === procId ? { ...p, status: 'published', visibility } : p));
+  const approveProcess = async (procId, visibility = 'private') => {
+    const updated = processes.find(p=>p.id===procId);
+    if (!updated) return;
+    const next = { ...updated, status: 'published', visibility };
+    await api.put(`/api/processes/${procId}`, next);
+    setProcesses(prev => prev.map(p=>p.id===procId?next:p));
   };
-  const rejectProcess = (procId) => {
-    setProcesses(prev => prev.map(p => p.id === procId ? { ...p, workspaceId: null, status: 'draft' } : p));
+  const rejectProcess = async (procId) => {
+    const updated = processes.find(p=>p.id===procId);
+    if (!updated) return;
+    const next = { ...updated, workspaceId: null, status: 'draft' };
+    await api.put(`/api/processes/${procId}`, next);
+    setProcesses(prev => prev.map(p=>p.id===procId?next:p));
   };
 
-  // Activities CRUD
-  const saveActivity = (act) => { setActivities(prev => [...prev, act]); };
-  const deleteActivity = (id) => { setActivities(prev => prev.filter(a => a.id !== id)); };
-  const completeActivity = (id) => {
+  // ── Actividades ───────────────────────────────────────────────────────────
+  const saveActivity = async (act) => {
+    await api.post('/api/activities', act);
+    setActivities(prev => [...prev, act]);
+  };
+  const deleteActivity = async (id) => {
+    await api.del(`/api/activities/${id}`);
+    setActivities(prev => prev.filter(a=>a.id!==id));
+  };
+  const completeActivity = async (id) => {
     const completion = { userId: user?.id, completedAt: now() };
-    setActivities(prev => prev.map(a => a.id === id ? { ...a, completions: [...(a.completions||[]).filter(c=>c.userId!==user?.id), completion] } : a));
-    setViewActivity(prev => prev?.id === id ? { ...prev, completions: [...(prev.completions||[]).filter(c=>c.userId!==user?.id), completion] } : prev);
+    const act = activities.find(a=>a.id===id);
+    if (!act) return;
+    const next = { ...act, completions: [...(act.completions||[]).filter(c=>c.userId!==user?.id), completion] };
+    await api.put(`/api/activities/${id}`, next);
+    setActivities(prev => prev.map(a=>a.id===id?next:a));
+    setViewActivity(prev => prev?.id===id ? next : prev);
   };
   const openActivity = (act) => { setViewActivity(act); };
+
+  if (appLoading) return (
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:t.bg, gap:16 }}>
+      <div style={{ width:64, height:64, borderRadius:20, background:t.primary, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:t.shadowMd }}>
+        <BookOpen size={32} color="#fff"/>
+      </div>
+      <div style={{ fontSize:22, fontWeight:800, color:t.primary }}>GuíaPro</div>
+      <div style={{ width:40, height:4, borderRadius:4, background:t.primaryLight, overflow:'hidden' }}>
+        <div className="pulse" style={{ height:'100%', background:t.primary, borderRadius:4 }}/>
+      </div>
+    </div>
+  );
 
   if (!user) return <div style={{ height:'100%', overflow:'auto' }}><AuthScreen onAuth={handleAuth} t={t}/></div>;
 
