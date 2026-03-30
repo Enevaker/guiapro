@@ -1921,16 +1921,16 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
 // FLYERS — Control de Distribución Izzi Telecom
 // ════════════════════════════════════════════════════════════
 const DEF_FLAYERS = [
-  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, cC:1, pCC:3188 },
-  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, cC:1, pCC:2306 },
-  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  cC:1, pCC:4315 },
-  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, cC:1, pCC:1500 },
-  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  cC:1, pCC:3300 },
-  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  cC:1, pCC:3300 },
-  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  cC:1, pCC:1000 },
-  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  cC:1, pCC:1232 },
-  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  cC:1, pCC:2464 },
-  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  cC:1, pCC:924  },
+  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, pCG:4500, cC:1, pCC:3188 },
+  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, pCG:4500, cC:1, pCC:2306 },
+  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  pCG:4500, cC:1, pCC:4315 },
+  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, pCG:4500, cC:1, pCC:1500 },
+  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
+  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
+  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  pCG:4500, cC:1, pCC:1000 },
+  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:1232 },
+  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:2464 },
+  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:924  },
 ];
 const DEF_FL_P = { sup:4, ent:2, pxcaja:4, pxpaq:1125 };
 const FL_LS_F  = 'izzi_flyers_v2';
@@ -1944,16 +1944,14 @@ const FL_CAT_C = {
 const fmtN = n => Number(n).toLocaleString('es-MX');
 
 function calcFl(f, P) {
-  const pcg  = P.pxcaja * P.pxpaq;
+  const pcg  = f.pCG || (P.pxcaja * P.pxpaq);   // piezas por caja grande (propio del flyer)
   const tot  = f.cG * pcg + f.cC * f.pCC;
   const qnc  = tot / P.ent;
   const psq  = Math.floor(tot / P.sup / P.ent);
   const sob  = Math.floor(qnc) % P.sup;
   const cajC = Math.floor(psq / pcg);
-  const rem  = psq % pcg;
-  const paqS = Math.floor(rem / P.pxpaq);
-  const pzS  = rem % P.pxpaq;
-  return { tot, qnc, psq, sob, cajC, paqS, pzS, pcg };
+  const pzS  = psq % pcg;
+  return { tot, qnc, psq, sob, cajC, pzS, pcg };
 }
 
 function FlCatBadge({ cat }) {
@@ -1964,8 +1962,7 @@ function FlCatBadge({ cat }) {
 function physDesc(c) {
   const p = [];
   if (c.cajC > 0) p.push(`${c.cajC} caja${c.cajC!==1?'s gdes':' gde'}`);
-  if (c.paqS > 0) p.push(`${c.paqS} paq.`);
-  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} pzas`);
+  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} pzas sueltas`);
   return p.join(' + ') || '0 pzas';
 }
 
@@ -1984,7 +1981,7 @@ function FlDetailModal({ fl, P, onClose, t }) {
 
         <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📊 Inventario</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          {[['Cajas Grandes', fl.cG],['Caja Chica',`${fl.cC}×${fmtN(fl.pCC)}`],['Pzas/Caja Gde',fmtN(c.pcg)],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
+          {[['Cajas Grandes', fl.cG],['Pzas/Caja Gde',fmtN(c.pcg)],['Cajas Chicas',`${fl.cC}×${fmtN(fl.pCC)}`],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
             <div key={l} style={{ background:t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${t.border}` }}>
               <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
               <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: l==='Total Piezas'?'#16A34A':t.text }}>{v}</div>
@@ -2017,12 +2014,11 @@ function FlDetailModal({ fl, P, onClose, t }) {
           {c.sob>0 && <div style={{ background:'#FEF2F2', padding:'8px 14px', fontSize:12, fontWeight:700, color:'#DC2626' }}>⚠️ Sobrante: {c.sob} pieza{c.sob!==1?'s':''} — distribuir manualmente</div>}
         </div>
 
-        <div style={{ marginTop:14, background:t.cardAlt, borderRadius:10, padding:'12px 14px', fontSize:13, lineHeight:1.9, border:`1px solid ${t.border}` }}>
-          <div style={{ fontWeight:700, color:t.text, marginBottom:4 }}>🧮 Desglose físico exacto:</div>
+        <div style={{ marginTop:14, background:'#DCFCE7', borderRadius:10, padding:'12px 14px', fontSize:13, lineHeight:1.9, border:'1px solid #BBF7D0' }}>
+          <div style={{ fontWeight:700, color:'#166534', marginBottom:4 }}>🧮 Desglose físico exacto por supervisor:</div>
           {c.cajC>0 && <div>📦 <strong>{c.cajC}</strong> caja{c.cajC!==1?'s grandes':' grande'} completa{c.cajC!==1?'s':''} = <span style={{fontFamily:'monospace'}}>{fmtN(c.cajC*c.pcg)}</span> pzas</div>}
-          {c.paqS>0 && <div>🗃️ <strong>{c.paqS}</strong> paquete{c.paqS!==1?'s sueltos':' suelto'} = <span style={{fontFamily:'monospace'}}>{fmtN(c.paqS*P.pxpaq)}</span> pzas</div>}
           {c.pzS >0 && <div>🗞️ <strong>{fmtN(c.pzS)}</strong> pieza{c.pzS!==1?'s sueltas':' suelta'}</div>}
-          <div style={{ marginTop:6, fontWeight:800, color:'#16A34A' }}>✅ Total: {fmtN(c.psq)} pzas por supervisor</div>
+          <div style={{ marginTop:6, fontWeight:800, color:'#16A34A', fontSize:15 }}>✅ Total: {fmtN(c.psq)} pzas por supervisor</div>
         </div>
       </div>
     </div>
@@ -2037,7 +2033,7 @@ function FlayersScreen({ t }) {
   const [detail, setDetail] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]   = useState(null);
-  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, cC:1, pCC:0 });
+  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, pCG:4500, cC:1, pCC:0 });
   const [fErr, setFErr] = useState('');
   const [srch, setSrch] = useState('');
 
@@ -2051,14 +2047,14 @@ function FlayersScreen({ t }) {
 
   const openForm = (id=null) => {
     setEditId(id); setFErr('');
-    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,cC:f.cC,pCC:f.pCC}); }
-    else setForm({name:'',cat:'EXTERNOS',cG:0,cC:1,pCC:0});
+    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,pCG:f.pCG||4500,cC:f.cC,pCC:f.pCC}); }
+    else setForm({name:'',cat:'EXTERNOS',cG:0,pCG:4500,cC:1,pCC:0});
     setShowForm(true);
   };
   const saveForm = () => {
     if (!form.name.trim()) { setFErr('Ingresa el nombre del flyer'); return; }
-    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,cC:+form.cC||0,pCC:+form.pCC||0}:f));
-    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,cC:+form.cC||0,pCC:+form.pCC||0}]); }
+    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,pCG:+form.pCG||4500,cC:+form.cC||0,pCC:+form.pCC||0}:f));
+    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,pCG:+form.pCG||4500,cC:+form.cC||0,pCC:+form.pCC||0}]); }
     setShowForm(false);
   };
   const delFl = id => { const f=fls.find(x=>x.id===id); if(!window.confirm(`¿Eliminar "${f.name}"?`))return; saveF(fls.filter(x=>x.id!==id)); };
@@ -2136,7 +2132,7 @@ function FlayersScreen({ t }) {
                     <FlCatBadge cat={f.cat}/>
                   </div>
                   <div style={{ fontFamily:'monospace', fontSize:11, color:t.textMuted }}>
-                    {f.cG} cj.gdes + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:t.text,fontWeight:700}}>{fmtN(c.tot)} pzas totales</strong>
+                    {f.cG} cj.gdes×{fmtN(c.pcg)} + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:t.text,fontWeight:700}}>{fmtN(c.tot)} pzas</strong>
                   </div>
                 </div>
 
@@ -2242,7 +2238,7 @@ function FlayersScreen({ t }) {
                     <div key={f.id} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:11, padding:'11px 13px', marginBottom:6, display:'flex', alignItems:'center', gap:9 }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:t.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</div>
-                        <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>{f.cG}×{fmtN(pcg)} + {f.cC}×{fmtN(f.pCC)} = {fmtN(cv.tot)} pzas</div>
+                        <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>{f.cG}×{fmtN(f.pCG||cv.pcg)} + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:'#16A34A'}}>{fmtN(cv.tot)} pzas</strong></div>
                       </div>
                       <button onClick={()=>openForm(f.id)} style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:8, padding:'7px 9px', cursor:'pointer', color:t.textSub, display:'flex', alignItems:'center' }}><Edit3 size={13}/></button>
                       <button onClick={()=>delFl(f.id)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'7px 9px', cursor:'pointer', color:'#DC2626', display:'flex', alignItems:'center' }}><Trash2 size={13}/></button>
@@ -2295,14 +2291,53 @@ function FlayersScreen({ t }) {
               <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Categoría *</label>
               <select value={form.cat} onChange={setf('cat')}>{FL_CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:11 }}>
-              <div><label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Cajas Grandes</label><input type="number" value={form.cG} min={0} onChange={setf('cG')}/></div>
-              <div><label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Cajas Chicas</label><input type="number" value={form.cC} min={0} onChange={setf('cC')}/></div>
+            {/* Cajas Grandes + piezas por caja grande */}
+            <div style={{ background:'#DCFCE7', border:'1px solid #BBF7D0', borderRadius:11, padding:'12px 13px', marginBottom:11 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:'#166534', marginBottom:10 }}>📦 Cajas Grandes</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:'#166534', display:'block', marginBottom:5 }}>Número de cajas</label>
+                  <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff' }}/>
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:'#166534', display:'block', marginBottom:5 }}>Piezas por caja grande</label>
+                  <input type="number" value={form.pCG} min={1} onChange={setf('pCG')} style={{ background:'#fff' }} placeholder="Ej: 4500"/>
+                </div>
+              </div>
+              {(+form.cG>0 && +form.pCG>0) && (
+                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:13, fontWeight:700, color:'#16A34A' }}>
+                  → {fmtN(+form.cG * +form.pCG)} pzas en cajas grandes
+                </div>
+              )}
             </div>
-            <div style={{ marginBottom:13 }}>
-              <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Piezas en Caja Chica</label>
-              <input type="number" value={form.pCC} min={0} onChange={setf('pCC')}/>
+            {/* Cajas Chicas */}
+            <div style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:11, padding:'12px 13px', marginBottom:11 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:t.textSub, marginBottom:10 }}>🗃️ Cajas Chicas</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:t.textSub, display:'block', marginBottom:5 }}>Número de cajas</label>
+                  <input type="number" value={form.cC} min={0} onChange={setf('cC')}/>
+                </div>
+                <div>
+                  <label style={{ fontSize:12, fontWeight:700, color:t.textSub, display:'block', marginBottom:5 }}>Piezas en caja chica</label>
+                  <input type="number" value={form.pCC} min={0} onChange={setf('pCC')} placeholder="Ej: 3188"/>
+                </div>
+              </div>
+              {(+form.cC>0 && +form.pCC>0) && (
+                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:13, fontWeight:700, color:t.textSub }}>
+                  → {fmtN(+form.cC * +form.pCC)} pzas en cajas chicas
+                </div>
+              )}
             </div>
+            {/* Total preview */}
+            {(+form.cG>0||+form.cC>0) && (+form.pCG>0||+form.pCC>0) && (
+              <div style={{ background:'#16A34A', borderRadius:10, padding:'10px 14px', marginBottom:11, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ color:'rgba(255,255,255,.8)', fontSize:12, fontWeight:700 }}>TOTAL PIEZAS</span>
+                <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:900, color:'#fff' }}>
+                  {fmtN((+form.cG*(+form.pCG||0)) + (+form.cC*(+form.pCC||0)))}
+                </span>
+              </div>
+            )}
             {fErr && <div style={{ color:'#DC2626', fontSize:12, fontWeight:700, background:'#FEF2F2', padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{fErr}</div>}
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={()=>setShowForm(false)} style={{ flex:1, padding:12, borderRadius:10, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }}>Cancelar</button>
