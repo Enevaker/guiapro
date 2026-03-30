@@ -2094,27 +2094,28 @@ function FlayersScreen({ t }) {
 
         {/* ══ DASHBOARD ══ */}
         {sub==='dash' && <>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
-            {[['🗞️','Total Piezas',fmtN(tot.tp),`${fls.length} flyers`],
-              ['📦','Total Cajas',fmtN(tot.cG+tot.cC),`${tot.cG} gdes + ${tot.cC} chicas`],
-              ['📅','/ Quincena',fmtN(Math.floor(tot.tp/P.ent)),`${P.ent} entregas`],
-              ['👥','/ Sup · Qnc',fmtN(Math.floor(tot.tp/P.sup/P.ent)),`${P.sup} supervisores`],
-            ].map(([ico,lbl,val,sub])=>(
-              <div key={lbl} className="card" style={{ padding:'12px 12px 10px' }}>
-                <div style={{ fontSize:18, marginBottom:5 }}>{ico}</div>
-                <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{lbl}</div>
-                <div style={{ fontFamily:'monospace', fontSize:19, fontWeight:800, color: lbl==='/ Sup · Qnc'?'#16A34A':t.text }}>{val}</div>
-                <div style={{ fontSize:10, color:t.textMuted, marginTop:2 }}>{sub}</div>
+          {/* KPI strip compacto horizontal */}
+          <div className="scroll-x" style={{ display:'flex', gap:8, marginBottom:12 }}>
+            {[['🗞️',`${fls.length} flyers`,fmtN(tot.tp),'Total Piezas'],
+              ['📦',`${tot.cG} gdes+${tot.cC} chicas`,fmtN(tot.cG+tot.cC),'Total Cajas'],
+              ['📅',`${P.ent} entregas`,fmtN(Math.floor(tot.tp/P.ent)),'/ Quincena'],
+              ['👥',`${P.sup} supervisores`,fmtN(Math.floor(tot.tp/P.sup/P.ent)),'/ Sup · Qnc'],
+            ].map(([ico,sub2,val,lbl])=>(
+              <div key={lbl} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:11, padding:'8px 13px', flexShrink:0, minWidth:110 }}>
+                <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:2 }}>{ico} {lbl}</div>
+                <div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color: lbl==='/ Sup · Qnc'?'#16A34A':t.text }}>{val}</div>
+                <div style={{ fontSize:9, color:t.textMuted, marginTop:1 }}>{sub2}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ display:'flex', gap:5, marginBottom:10, overflowX:'auto', paddingBottom:2 }}>
+          {/* Filtros de categoría */}
+          <div style={{ display:'flex', gap:5, marginBottom:12, overflowX:'auto', paddingBottom:2 }}>
             {['TODOS','EXTERNOS','CAMBACEO','ATC'].map(c=>{
               const s=FL_CAT_C[c]||{color:'#16A34A',bg:'#DCFCE7'};
               const active=cat===c;
               return <button key={c} onClick={()=>setCat(c)}
-                style={{ padding:'5px 13px', borderRadius:20, border:`1.5px solid ${active?s.color:t.border}`,
+                style={{ padding:'6px 14px', borderRadius:20, border:`1.5px solid ${active?s.color:t.border}`,
                   background: active?s.color:t.card, color: active?'#fff':t.textSub,
                   fontWeight:700, fontSize:12, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
                 {c==='TODOS'?'Todos':c}
@@ -2122,25 +2123,52 @@ function FlayersScreen({ t }) {
             })}
           </div>
 
-          <div style={{ fontSize:11, color:t.textMuted, marginBottom:8 }}>👆 Toca un flyer para ver el desglose completo</div>
+          {/* Tarjetas con desglose inline por supervisor */}
           {shown.map(f=>{
             const c=calcFl(f,P);
             return (
-              <div key={f.id} onClick={()=>setDetail(f)}
-                style={{ background:t.card, borderRadius:13, border:`1px solid ${t.border}`, padding:'12px 13px', marginBottom:8, cursor:'pointer' }}>
-                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:5 }}>
-                  <div style={{ fontSize:13.5, fontWeight:800, color:t.text, flex:1, lineHeight:1.3 }}>{f.name}</div>
-                  <FlCatBadge cat={f.cat}/>
+              <div key={f.id} style={{ background:t.card, borderRadius:14, border:`1px solid ${t.border}`, marginBottom:12, overflow:'hidden' }}>
+
+                {/* Nombre + badge */}
+                <div style={{ padding:'13px 14px 9px' }}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:5 }}>
+                    <div style={{ fontSize:16, fontWeight:800, color:t.text, flex:1, lineHeight:1.35 }}>{f.name}</div>
+                    <FlCatBadge cat={f.cat}/>
+                  </div>
+                  <div style={{ fontFamily:'monospace', fontSize:11, color:t.textMuted }}>
+                    {f.cG} cj.gdes + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:t.text,fontWeight:700}}>{fmtN(c.tot)} pzas totales</strong>
+                  </div>
                 </div>
-                <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:6 }}>
-                  <span style={{ fontFamily:'monospace', fontSize:11, color:t.textSub }}>{f.cG} cajas + {f.cC}×{fmtN(f.pCC)}</span>
-                  <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>= {fmtN(c.tot)}</span>
+
+                {/* Caja verde: piezas por supervisor */}
+                <div style={{ background:'#DCFCE7', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                  <div>
+                    <div style={{ fontSize:9, fontWeight:700, color:'#166534', textTransform:'uppercase', letterSpacing:.6, marginBottom:3 }}>Cada supervisor recibe / quincena</div>
+                    <div style={{ display:'flex', alignItems:'baseline', gap:5 }}>
+                      <span style={{ fontFamily:'monospace', fontSize:28, fontWeight:900, color:'#16A34A', lineHeight:1 }}>{fmtN(c.psq)}</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:'#16A34A' }}>pzas</span>
+                    </div>
+                    <div style={{ fontSize:11, color:'#166534', marginTop:3, fontWeight:600 }}>{physDesc(c)}</div>
+                  </div>
+                  {c.sob>0 && (
+                    <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'7px 12px', textAlign:'center', flexShrink:0 }}>
+                      <div style={{ fontSize:9, fontWeight:700, color:'#DC2626', textTransform:'uppercase' }}>Sobrante</div>
+                      <div style={{ fontFamily:'monospace', fontSize:20, fontWeight:900, color:'#DC2626' }}>{c.sob}</div>
+                      <div style={{ fontSize:9, color:'#DC2626' }}>pzas extra</div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display:'flex', gap:14 }}>
-                  <div><div style={{ fontSize:9, color:t.textMuted }}>/ Quincena</div><div style={{ fontFamily:'monospace', fontSize:13, fontWeight:600, color:t.text }}>{fmtN(Math.floor(c.qnc))}</div></div>
-                  <div><div style={{ fontSize:9, color:t.textMuted }}>/ Sup · Qnc</div><div style={{ fontFamily:'monospace', fontSize:14, fontWeight:800, color:'#16A34A' }}>{fmtN(c.psq)}</div></div>
-                  {c.sob>0 && <div><div style={{ fontSize:9, color:'#DC2626' }}>Sobrante</div><div style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#DC2626', background:'#FEF2F2', padding:'1px 7px', borderRadius:5 }}>{c.sob}</div></div>}
+
+                {/* Grid de supervisores */}
+                <div style={{ padding:'8px 14px 12px', display:'grid', gridTemplateColumns:`repeat(${Math.min(P.sup,4)}, 1fr)`, gap:6 }}>
+                  {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
+                    <div key={i} style={{ textAlign:'center', background:'#F0FDF4', borderRadius:9, padding:'7px 4px', border:'1px solid #BBF7D0' }}>
+                      <div style={{ fontSize:9, color:'#166534', fontWeight:600, marginBottom:2 }}>👤 Sup {i}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:15, fontWeight:900, color:'#16A34A' }}>{fmtN(c.psq)}</div>
+                    </div>
+                  ))}
                 </div>
+
               </div>
             );
           })}
