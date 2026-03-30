@@ -1918,6 +1918,376 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
 }
 
 // ════════════════════════════════════════════════════════════
+// FLYERS — Control de Distribución Izzi Telecom
+// ════════════════════════════════════════════════════════════
+const DEF_FLAYERS = [
+  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, cC:1, pCC:3188 },
+  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, cC:1, pCC:2306 },
+  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  cC:1, pCC:4315 },
+  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, cC:1, pCC:1500 },
+  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  cC:1, pCC:3300 },
+  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  cC:1, pCC:3300 },
+  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  cC:1, pCC:1000 },
+  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  cC:1, pCC:1232 },
+  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  cC:1, pCC:2464 },
+  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  cC:1, pCC:924  },
+];
+const DEF_FL_P = { sup:4, ent:2, pxcaja:4, pxpaq:1125 };
+const FL_LS_F  = 'izzi_flyers_v2';
+const FL_LS_P  = 'izzi_params_v2';
+const FL_CATS  = ['EXTERNOS','CAMBACEO','ATC'];
+const FL_CAT_C = {
+  EXTERNOS: { bg:'#E0F2FE', color:'#0891B2' },
+  CAMBACEO: { bg:'#F7FEE7', color:'#65A30D' },
+  ATC:      { bg:'#ECFDF5', color:'#059669' },
+};
+const fmtN = n => Number(n).toLocaleString('es-MX');
+
+function calcFl(f, P) {
+  const pcg  = P.pxcaja * P.pxpaq;
+  const tot  = f.cG * pcg + f.cC * f.pCC;
+  const qnc  = tot / P.ent;
+  const psq  = Math.floor(tot / P.sup / P.ent);
+  const sob  = Math.floor(qnc) % P.sup;
+  const cajC = Math.floor(psq / pcg);
+  const rem  = psq % pcg;
+  const paqS = Math.floor(rem / P.pxpaq);
+  const pzS  = rem % P.pxpaq;
+  return { tot, qnc, psq, sob, cajC, paqS, pzS, pcg };
+}
+
+function FlCatBadge({ cat }) {
+  const s = FL_CAT_C[cat] || { bg:'#f1f5f9', color:'#64748b' };
+  return <span style={{ background:s.bg, color:s.color, fontSize:11, fontWeight:800, padding:'3px 9px', borderRadius:6 }}>{cat}</span>;
+}
+
+function physDesc(c) {
+  const p = [];
+  if (c.cajC > 0) p.push(`${c.cajC} caja${c.cajC!==1?'s gdes':' gde'}`);
+  if (c.paqS > 0) p.push(`${c.paqS} paq.`);
+  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} pzas`);
+  return p.join(' + ') || '0 pzas';
+}
+
+function FlDetailModal({ fl, P, onClose, t }) {
+  const c = calcFl(fl, P);
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-sheet" style={{ maxHeight:'90vh' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-handle"/>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+          <div><FlCatBadge cat={fl.cat}/>
+            <div style={{ fontSize:17, fontWeight:800, color:t.text, marginTop:6, lineHeight:1.3 }}>{fl.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:10, width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', color:t.textSub, flexShrink:0 }}><X size={16}/></button>
+        </div>
+
+        <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📊 Inventario</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
+          {[['Cajas Grandes', fl.cG],['Caja Chica',`${fl.cC}×${fmtN(fl.pCC)}`],['Pzas/Caja Gde',fmtN(c.pcg)],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
+            <div key={l} style={{ background:t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${t.border}` }}>
+              <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
+              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: l==='Total Piezas'?'#16A34A':t.text }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📅 Por Quincena</div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
+          {[['/ Quincena',fmtN(Math.floor(c.qnc)),false],['/ Sup·Qnc',fmtN(c.psq),false],['Sobrante',c.sob,true]].map(([l,v,isSob]) => (
+            <div key={l} style={{ background: isSob&&c.sob>0?'#FEF2F2':t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${isSob&&c.sob>0?'#FECACA':t.border}` }}>
+              <div style={{ fontSize:9, fontWeight:700, color: isSob&&c.sob>0?'#DC2626':t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
+              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: isSob?(c.sob>0?'#DC2626':'#16A34A'):'#16A34A' }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📋 Desglose por Supervisor / Quincena</div>
+        <div style={{ border:`1px solid ${t.border}`, borderRadius:12, overflow:'hidden' }}>
+          <div style={{ background:'#16A34A', color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:700 }}>
+            {P.sup} supervisores — {fmtN(c.psq)} pzas c/u
+          </div>
+          {Array.from({length:P.sup},(_,i)=>i+1).map(i => (
+            <div key={i} style={{ padding:'10px 14px', borderBottom:`1px solid ${t.border}`, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontWeight:700, fontSize:13, minWidth:96, color:t.text }}>👤 Supervisor {i}</span>
+              <span style={{ fontFamily:'monospace', fontWeight:700, fontSize:15, color:'#16A34A' }}>{fmtN(c.psq)}</span>
+              <span style={{ fontSize:11, color:t.textMuted, flex:1, textAlign:'right' }}>{physDesc(c)}</span>
+            </div>
+          ))}
+          {c.sob>0 && <div style={{ background:'#FEF2F2', padding:'8px 14px', fontSize:12, fontWeight:700, color:'#DC2626' }}>⚠️ Sobrante: {c.sob} pieza{c.sob!==1?'s':''} — distribuir manualmente</div>}
+        </div>
+
+        <div style={{ marginTop:14, background:t.cardAlt, borderRadius:10, padding:'12px 14px', fontSize:13, lineHeight:1.9, border:`1px solid ${t.border}` }}>
+          <div style={{ fontWeight:700, color:t.text, marginBottom:4 }}>🧮 Desglose físico exacto:</div>
+          {c.cajC>0 && <div>📦 <strong>{c.cajC}</strong> caja{c.cajC!==1?'s grandes':' grande'} completa{c.cajC!==1?'s':''} = <span style={{fontFamily:'monospace'}}>{fmtN(c.cajC*c.pcg)}</span> pzas</div>}
+          {c.paqS>0 && <div>🗃️ <strong>{c.paqS}</strong> paquete{c.paqS!==1?'s sueltos':' suelto'} = <span style={{fontFamily:'monospace'}}>{fmtN(c.paqS*P.pxpaq)}</span> pzas</div>}
+          {c.pzS >0 && <div>🗞️ <strong>{fmtN(c.pzS)}</strong> pieza{c.pzS!==1?'s sueltas':' suelta'}</div>}
+          <div style={{ marginTop:6, fontWeight:800, color:'#16A34A' }}>✅ Total: {fmtN(c.psq)} pzas por supervisor</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlayersScreen({ t }) {
+  const [fls, setFls] = useState(() => { try { return JSON.parse(localStorage.getItem(FL_LS_F)) || JSON.parse(JSON.stringify(DEF_FLAYERS)); } catch { return JSON.parse(JSON.stringify(DEF_FLAYERS)); } });
+  const [P, setP]     = useState(() => { try { return JSON.parse(localStorage.getItem(FL_LS_P)) || {...DEF_FL_P}; } catch { return {...DEF_FL_P}; } });
+  const [sub, setSub]   = useState('dash');
+  const [cat, setCat]   = useState('TODOS');
+  const [detail, setDetail] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId]   = useState(null);
+  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, cC:1, pCC:0 });
+  const [fErr, setFErr] = useState('');
+  const [srch, setSrch] = useState('');
+
+  const saveF = f => { setFls(f); localStorage.setItem(FL_LS_F, JSON.stringify(f)); };
+  const saveP = p => { setP(p);  localStorage.setItem(FL_LS_P, JSON.stringify(p)); };
+  const pcg   = P.pxcaja * P.pxpaq;
+  const tot   = fls.reduce((a,f)=>{ const c=calcFl(f,P); return { tp:a.tp+c.tot, cG:a.cG+f.cG, cC:a.cC+f.cC }; },{ tp:0,cG:0,cC:0 });
+  const shown = cat==='TODOS' ? fls : fls.filter(f=>f.cat===cat);
+  const srchR = srch.trim().length>=2 ? fls.filter(f=>f.name.toLowerCase().includes(srch.toLowerCase())) : [];
+  const setf  = k => e => setForm(p=>({...p,[k]:e.target.value}));
+
+  const openForm = (id=null) => {
+    setEditId(id); setFErr('');
+    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,cC:f.cC,pCC:f.pCC}); }
+    else setForm({name:'',cat:'EXTERNOS',cG:0,cC:1,pCC:0});
+    setShowForm(true);
+  };
+  const saveForm = () => {
+    if (!form.name.trim()) { setFErr('Ingresa el nombre del flyer'); return; }
+    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,cC:+form.cC||0,pCC:+form.pCC||0}:f));
+    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,cC:+form.cC||0,pCC:+form.pCC||0}]); }
+    setShowForm(false);
+  };
+  const delFl = id => { const f=fls.find(x=>x.id===id); if(!window.confirm(`¿Eliminar "${f.name}"?`))return; saveF(fls.filter(x=>x.id!==id)); };
+
+  const SUBS = [['dash','📊 Dashboard'],['consulta','🔍 Consulta'],['gestion','📦 Gestión'],['config','⚙️ Config']];
+
+  return (
+    <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
+      {/* Header */}
+      <div style={{ background:'linear-gradient(135deg,#16A34A 0%,#052E16 100%)', padding:'52px 16px 14px' }}>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:12 }}>
+          <div>
+            <p style={{ color:'rgba(255,255,255,.65)', fontSize:12 }}>Izzi Telecom · Auxiliar Adm.</p>
+            <h1 style={{ color:'#fff', fontSize:20, fontWeight:800 }}>🗞️ Control de Flyers</h1>
+          </div>
+          <div style={{ background:'rgba(0,0,0,.25)', borderRadius:10, padding:'7px 12px', textAlign:'right' }}>
+            <div style={{ color:'rgba(255,255,255,.6)', fontSize:9, fontWeight:700, textTransform:'uppercase' }}>Total Piezas</div>
+            <div style={{ color:'#fff', fontFamily:'monospace', fontSize:18, fontWeight:800 }}>{fmtN(tot.tp)}</div>
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:3, background:'rgba(0,0,0,.22)', borderRadius:10, padding:3 }}>
+          {SUBS.map(([id,lbl]) => (
+            <button key={id} onClick={()=>setSub(id)}
+              style={{ flex:1, padding:'7px 2px', borderRadius:8, border:'none', fontWeight:700, fontSize:10,
+                background: sub===id?'#fff':'transparent', color: sub===id?'#16A34A':'rgba(255,255,255,.7)', cursor:'pointer' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding:'14px 14px 0' }}>
+
+        {/* ══ DASHBOARD ══ */}
+        {sub==='dash' && <>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:14 }}>
+            {[['🗞️','Total Piezas',fmtN(tot.tp),`${fls.length} flyers`],
+              ['📦','Total Cajas',fmtN(tot.cG+tot.cC),`${tot.cG} gdes + ${tot.cC} chicas`],
+              ['📅','/ Quincena',fmtN(Math.floor(tot.tp/P.ent)),`${P.ent} entregas`],
+              ['👥','/ Sup · Qnc',fmtN(Math.floor(tot.tp/P.sup/P.ent)),`${P.sup} supervisores`],
+            ].map(([ico,lbl,val,sub])=>(
+              <div key={lbl} className="card" style={{ padding:'12px 12px 10px' }}>
+                <div style={{ fontSize:18, marginBottom:5 }}>{ico}</div>
+                <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{lbl}</div>
+                <div style={{ fontFamily:'monospace', fontSize:19, fontWeight:800, color: lbl==='/ Sup · Qnc'?'#16A34A':t.text }}>{val}</div>
+                <div style={{ fontSize:10, color:t.textMuted, marginTop:2 }}>{sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:'flex', gap:5, marginBottom:10, overflowX:'auto', paddingBottom:2 }}>
+            {['TODOS','EXTERNOS','CAMBACEO','ATC'].map(c=>{
+              const s=FL_CAT_C[c]||{color:'#16A34A',bg:'#DCFCE7'};
+              const active=cat===c;
+              return <button key={c} onClick={()=>setCat(c)}
+                style={{ padding:'5px 13px', borderRadius:20, border:`1.5px solid ${active?s.color:t.border}`,
+                  background: active?s.color:t.card, color: active?'#fff':t.textSub,
+                  fontWeight:700, fontSize:12, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+                {c==='TODOS'?'Todos':c}
+              </button>;
+            })}
+          </div>
+
+          <div style={{ fontSize:11, color:t.textMuted, marginBottom:8 }}>👆 Toca un flyer para ver el desglose completo</div>
+          {shown.map(f=>{
+            const c=calcFl(f,P);
+            return (
+              <div key={f.id} onClick={()=>setDetail(f)}
+                style={{ background:t.card, borderRadius:13, border:`1px solid ${t.border}`, padding:'12px 13px', marginBottom:8, cursor:'pointer' }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:5 }}>
+                  <div style={{ fontSize:13.5, fontWeight:800, color:t.text, flex:1, lineHeight:1.3 }}>{f.name}</div>
+                  <FlCatBadge cat={f.cat}/>
+                </div>
+                <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', marginBottom:6 }}>
+                  <span style={{ fontFamily:'monospace', fontSize:11, color:t.textSub }}>{f.cG} cajas + {f.cC}×{fmtN(f.pCC)}</span>
+                  <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>= {fmtN(c.tot)}</span>
+                </div>
+                <div style={{ display:'flex', gap:14 }}>
+                  <div><div style={{ fontSize:9, color:t.textMuted }}>/ Quincena</div><div style={{ fontFamily:'monospace', fontSize:13, fontWeight:600, color:t.text }}>{fmtN(Math.floor(c.qnc))}</div></div>
+                  <div><div style={{ fontSize:9, color:t.textMuted }}>/ Sup · Qnc</div><div style={{ fontFamily:'monospace', fontSize:14, fontWeight:800, color:'#16A34A' }}>{fmtN(c.psq)}</div></div>
+                  {c.sob>0 && <div><div style={{ fontSize:9, color:'#DC2626' }}>Sobrante</div><div style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#DC2626', background:'#FEF2F2', padding:'1px 7px', borderRadius:5 }}>{c.sob}</div></div>}
+                </div>
+              </div>
+            );
+          })}
+          {shown.length===0 && <div className="empty-state"><div className="empty-icon"><Layers size={28} color="#16A34A"/></div><p style={{fontWeight:600}}>Sin flyers en esta categoría</p></div>}
+        </>}
+
+        {/* ══ CONSULTA ══ */}
+        {sub==='consulta' && <>
+          <div style={{ background:t.card, border:`1.5px solid ${t.border}`, borderRadius:13, padding:'10px 13px', display:'flex', alignItems:'center', gap:9, marginBottom:12 }}>
+            <Search size={16} color={t.textMuted}/>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Buscar flyer por nombre…"
+              style={{ border:'none', background:'transparent', fontSize:15, color:t.text, flex:1, padding:0, outline:'none' }}/>
+            {srch && <button onClick={()=>setSrch('')} style={{ background:'none', border:'none', color:t.textMuted, cursor:'pointer' }}><X size={14}/></button>}
+          </div>
+          {srch.trim().length<2
+            ? <div className="empty-state"><div className="empty-icon"><Search size={28} color="#16A34A"/></div><p style={{fontWeight:600}}>Escribe al menos 2 caracteres</p></div>
+            : srchR.length===0
+              ? <div className="empty-state"><div className="empty-icon"><Search size={28} color="#16A34A"/></div><p>Sin resultados para "<strong>{srch}</strong>"</p></div>
+              : srchR.map(f=>{
+                  const c=calcFl(f,P);
+                  return (
+                    <div key={f.id} className="card" style={{ marginBottom:12, overflow:'hidden' }}>
+                      <div style={{ background:'linear-gradient(135deg,#16A34A,#052E16)', padding:'14px 16px' }}>
+                        <FlCatBadge cat={f.cat}/>
+                        <div style={{ color:'#fff', fontSize:16, fontWeight:800, marginTop:6 }}>{f.name}</div>
+                        <div style={{ color:'rgba(255,255,255,.7)', fontSize:12, marginTop:2 }}>
+                          {f.cG} cajas gdes · {f.cC}×{fmtN(f.pCC)} pzas · <strong style={{color:'#fff'}}>{fmtN(c.tot)} pzas total</strong>
+                        </div>
+                      </div>
+                      <div style={{ padding:'13px 15px' }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:7, marginBottom:12 }}>
+                          {[['/ Quincena',fmtN(Math.floor(c.qnc)),false],['/ Sup·Qnc',fmtN(c.psq),false],['Sobrante',c.sob,true]].map(([l,v,s])=>(
+                            <div key={l} style={{ textAlign:'center', background: s&&c.sob>0?'#FEF2F2':t.cardAlt, borderRadius:8, padding:'7px 4px', border:`1px solid ${s&&c.sob>0?'#FECACA':t.border}` }}>
+                              <div style={{ fontSize:9, fontWeight:700, color: s&&c.sob>0?'#DC2626':t.textMuted, textTransform:'uppercase' }}>{l}</div>
+                              <div style={{ fontFamily:'monospace', fontWeight:800, fontSize:16, color: s?(c.sob>0?'#DC2626':'#16A34A'):'#16A34A' }}>{v}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize:10, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:8 }}>Desglose por Supervisor</div>
+                        {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
+                          <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 0', borderBottom:`1px solid ${t.border}` }}>
+                            <span style={{ fontWeight:700, fontSize:13, minWidth:80 }}>👤 Sup {i}</span>
+                            <span style={{ fontFamily:'monospace', fontSize:15, fontWeight:800, color:'#16A34A' }}>{fmtN(c.psq)}</span>
+                            <span style={{ fontSize:11, color:t.textMuted, flex:1, textAlign:'right' }}>{physDesc(c)}</span>
+                          </div>
+                        ))}
+                        {c.sob>0 && <div style={{ background:'#FEF2F2', borderRadius:8, padding:'8px 12px', marginTop:8, color:'#DC2626', fontSize:12, fontWeight:700 }}>⚠️ Sobrante: {c.sob} pieza{c.sob!==1?'s':''} — distribuir manualmente</div>}
+                      </div>
+                    </div>
+                  );
+                })
+          }
+        </>}
+
+        {/* ══ GESTIÓN ══ */}
+        {sub==='gestion' && <>
+          <button onClick={()=>openForm()} style={{ width:'100%', padding:'12px', borderRadius:12, background:'#16A34A', color:'#fff', border:'none', fontWeight:700, fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:14 }}>
+            <Plus size={18}/>Agregar Flyer
+          </button>
+          {FL_CATS.map(c=>{
+            const list=fls.filter(f=>f.cat===c);
+            if(!list.length) return null;
+            return (
+              <div key={c} style={{ marginBottom:14 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:7 }}>
+                  <FlCatBadge cat={c}/><span style={{ fontSize:12, color:t.textMuted }}>{list.length} flyer{list.length!==1?'s':''}</span>
+                </div>
+                {list.map(f=>{
+                  const cv=calcFl(f,P);
+                  return (
+                    <div key={f.id} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:11, padding:'11px 13px', marginBottom:6, display:'flex', alignItems:'center', gap:9 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:t.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</div>
+                        <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>{f.cG}×{fmtN(pcg)} + {f.cC}×{fmtN(f.pCC)} = {fmtN(cv.tot)} pzas</div>
+                      </div>
+                      <button onClick={()=>openForm(f.id)} style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:8, padding:'7px 9px', cursor:'pointer', color:t.textSub, display:'flex', alignItems:'center' }}><Edit3 size={13}/></button>
+                      <button onClick={()=>delFl(f.id)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'7px 9px', cursor:'pointer', color:'#DC2626', display:'flex', alignItems:'center' }}><Trash2 size={13}/></button>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </>}
+
+        {/* ══ CONFIG ══ */}
+        {sub==='config' && <>
+          <div className="card" style={{ padding:16, marginBottom:12 }}>
+            <div style={{ fontSize:15, fontWeight:800, color:t.text, marginBottom:13 }}>⚙️ Parámetros Globales</div>
+            {[['sup','👥 Supervisores'],['ent','📅 Entregas / Quincena'],['pxcaja','📦 Paquetes / Caja Grande'],['pxpaq','🗞️ Piezas / Paquete']].map(([k,lbl])=>(
+              <div key={k} style={{ marginBottom:11 }}>
+                <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>{lbl}</label>
+                <input type="number" value={P[k]} min={1} onChange={e=>saveP({...P,[k]:+e.target.value||1})} style={{ fontFamily:'monospace', fontSize:15, fontWeight:700 }}/>
+              </div>
+            ))}
+            <div style={{ background:'#DCFCE7', borderRadius:10, padding:12, marginTop:6, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+              {[['Supervisores',P.sup],['Entregas/Qnc',P.ent],['Paquetes/Caja',P.pxcaja],['Pzas/Paquete',fmtN(P.pxpaq)],['Pzas/Caja Grande',fmtN(pcg)]].map(([l,v])=>(
+                <div key={l}><div style={{ fontSize:9, fontWeight:700, color:'#16A34A', textTransform:'uppercase' }}>{l}</div><div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color:t.text }}>{v}</div></div>
+              ))}
+            </div>
+          </div>
+          <div className="card" style={{ padding:16 }}>
+            <div style={{ fontSize:15, fontWeight:800, color:t.text, marginBottom:11 }}>💾 Datos</div>
+            <button onClick={()=>{if(window.confirm('¿Restaurar los 10 flyers originales?\nSe perderán tus cambios.')){saveF(JSON.parse(JSON.stringify(DEF_FLAYERS)));saveP({...DEF_FL_P});}}}
+              style={{ width:'100%', padding:'11px', borderRadius:10, background:'#FEF2F2', color:'#DC2626', border:'1px solid #FECACA', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+              🔄 Restaurar datos originales
+            </button>
+          </div>
+        </>}
+      </div>
+
+      {detail && <FlDetailModal fl={detail} P={P} onClose={()=>setDetail(null)} t={t}/>}
+
+      {showForm && (
+        <div className="modal-backdrop" onClick={()=>setShowForm(false)}>
+          <div className="modal-sheet" onClick={e=>e.stopPropagation()}>
+            <div className="modal-handle"/>
+            <div style={{ fontWeight:800, fontSize:17, color:t.text, marginBottom:14 }}>{editId?'Editar Flyer':'Agregar Flyer'}</div>
+            <div style={{ marginBottom:11 }}>
+              <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Nombre del Flyer *</label>
+              <input type="text" value={form.name} onChange={setf('name')} placeholder="Ej: Flyer Izzi TV Ligth"/>
+            </div>
+            <div style={{ marginBottom:11 }}>
+              <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Categoría *</label>
+              <select value={form.cat} onChange={setf('cat')}>{FL_CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:11 }}>
+              <div><label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Cajas Grandes</label><input type="number" value={form.cG} min={0} onChange={setf('cG')}/></div>
+              <div><label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Cajas Chicas</label><input type="number" value={form.cC} min={0} onChange={setf('cC')}/></div>
+            </div>
+            <div style={{ marginBottom:13 }}>
+              <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Piezas en Caja Chica</label>
+              <input type="number" value={form.pCC} min={0} onChange={setf('pCC')}/>
+            </div>
+            {fErr && <div style={{ color:'#DC2626', fontSize:12, fontWeight:700, background:'#FEF2F2', padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{fErr}</div>}
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setShowForm(false)} style={{ flex:1, padding:12, borderRadius:10, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={saveForm} style={{ flex:2, padding:12, borderRadius:10, background:'#16A34A', color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}><CheckCircle2 size={16}/>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
 // MAIN APP
 // ════════════════════════════════════════════════════════════
 export default function App() {
@@ -2217,10 +2587,11 @@ export default function App() {
   }
 
   const TABS = [
-    { id:'home',       icon:<Home size={22}/>,      label:'Inicio' },
-    { id:'workspaces', icon:<Briefcase size={22}/>,  label:'Proyectos' },
-    { id:'mine',       icon:<FileText size={22}/>,   label:'Mis guías' },
-    { id:'profile',    icon:<User size={22}/>,       label:'Perfil' },
+    { id:'home',       icon:<Home size={22}/>,        label:'Inicio' },
+    { id:'workspaces', icon:<Briefcase size={22}/>,    label:'Proyectos' },
+    { id:'mine',       icon:<FileText size={22}/>,     label:'Mis guías' },
+    { id:'flyers',     icon:<Layers size={22}/>,       label:'Flyers' },
+    { id:'profile',    icon:<User size={22}/>,         label:'Perfil' },
   ];
 
   return (
@@ -2229,10 +2600,11 @@ export default function App() {
         {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
         {tab==='workspaces' && <WorkspacesScreen user={user} workspaces={workspaces} processes={processes} users={users} onOpenWs={openWs} onCreateWs={() => setCreatingWs(true)} t={t}/>}
         {tab==='mine'       && <MyProcessesScreen user={user} processes={processes} users={users} workspaces={workspaces} onOpen={openProcess} onEdit={editProcess} onSubmit={submitProcess} t={t}/>}
+        {tab==='flyers'     && <FlayersScreen t={t}/>}
         {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} onUpdateUser={updateCurrentUser} t={t}/>}
       </div>
 
-      {tab !== 'profile' && tab !== 'workspaces' && (
+      {tab !== 'profile' && tab !== 'workspaces' && tab !== 'flyers' && (
         <button className="fab" onClick={() => setCreating(true)} title="Nuevo proceso"><Plus size={26}/></button>
       )}
 
