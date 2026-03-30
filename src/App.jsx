@@ -2182,31 +2182,19 @@ function FlayersScreen({ t }) {
                   )}
                 </div>
 
-                {/* Grid de supervisores con 3 niveles */}
-                <div style={{ padding:'8px 14px 12px' }}>
-                  <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(P.sup,4)}, 1fr)`, gap:6 }}>
-                    {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
-                      <div key={i} style={{ background:t.primaryLight, borderRadius:10, padding:'8px 7px', border:`1px solid ${t.border}` }}>
-                        <div style={{ fontSize:9, color:t.primaryDark, fontWeight:700, marginBottom:5, textAlign:'center' }}>👤 Sup {i}</div>
-                        {c.cajC>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
-                          <span style={{ fontSize:10 }}>📦</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{c.cajC}</span>
-                          <span style={{ fontSize:9, color:t.primaryDark }}>caja{c.cajC!==1?'s':''}</span>
-                        </div>}
-                        {c.paqS>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
-                          <span style={{ fontSize:10 }}>🗃️</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{c.paqS}</span>
-                          <span style={{ fontSize:9, color:t.primaryDark }}>paq.</span>
-                        </div>}
-                        {c.pzS>0 && <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-                          <span style={{ fontSize:10 }}>🗞️</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{fmtN(c.pzS)}</span>
-                          <span style={{ fontSize:9, color:t.primaryDark }}>flyers</span>
-                        </div>}
-                        {c.cajC===0 && c.paqS===0 && c.pzS===0 && <div style={{ fontSize:9, color:'#9CA3AF', textAlign:'center' }}>0</div>}
-                      </div>
-                    ))}
-                  </div>
+                {/* Desglose en 3 niveles — una sola fila */}
+                <div style={{ padding:'0 14px 12px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                  {[
+                    ['📦', c.cajC===0?'—':c.cajC,         'caja'+(c.cajC!==1?'s':''),  c.cajC>0],
+                    ['🗃️', c.paqS===0?'—':c.paqS,         'paquete'+(c.paqS!==1?'s':''), c.paqS>0],
+                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS),    'flyers sueltos',             c.pzS>0],
+                  ].map(([ico,val,lbl,hasVal])=>(
+                    <div key={lbl} style={{ background:t.primaryLight, borderRadius:10, padding:'9px 8px', border:`1px solid ${t.border}`, textAlign:'center' }}>
+                      <div style={{ fontSize:16, marginBottom:3 }}>{ico}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:900, color:hasVal?t.primary:'#94a3b8', lineHeight:1 }}>{val}</div>
+                      <div style={{ fontSize:9, color:t.primaryDark, fontWeight:600, marginTop:3 }}>{lbl}</div>
+                    </div>
+                  ))}
                 </div>
 
               </div>
