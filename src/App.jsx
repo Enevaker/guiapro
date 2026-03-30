@@ -1991,7 +1991,7 @@ function FlDetailModal({ fl, P, onClose, t }) {
           {[['Cajas Grandes', fl.cG],['Pzas/Caja Gde',fmtN(c.pcg)],['Cajas Chicas',`${fl.cC}×${fmtN(fl.pCC)}`],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
             <div key={l} style={{ background:t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${t.border}` }}>
               <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
-              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: l==='Total Piezas'?'#16A34A':t.text }}>{v}</div>
+              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: l==='Total Piezas'?t.primary:t.text }}>{v}</div>
             </div>
           ))}
         </div>
@@ -2001,20 +2001,20 @@ function FlDetailModal({ fl, P, onClose, t }) {
           {[['/ Quincena',fmtN(Math.floor(c.qnc)),false],['/ Sup·Qnc',fmtN(c.psq),false],['Sobrante',c.sob,true]].map(([l,v,isSob]) => (
             <div key={l} style={{ background: isSob&&c.sob>0?'#FEF2F2':t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${isSob&&c.sob>0?'#FECACA':t.border}` }}>
               <div style={{ fontSize:9, fontWeight:700, color: isSob&&c.sob>0?'#DC2626':t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
-              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: isSob?(c.sob>0?'#DC2626':'#16A34A'):'#16A34A' }}>{v}</div>
+              <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: isSob?(c.sob>0?'#DC2626':t.primary):t.primary }}>{v}</div>
             </div>
           ))}
         </div>
 
         <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📋 Desglose por Supervisor / Quincena</div>
         <div style={{ border:`1px solid ${t.border}`, borderRadius:12, overflow:'hidden' }}>
-          <div style={{ background:'#16A34A', color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:700 }}>
+          <div style={{ background:t.primary, color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:700 }}>
             {P.sup} supervisores — {fmtN(c.psq)} pzas c/u
           </div>
           {Array.from({length:P.sup},(_,i)=>i+1).map(i => (
             <div key={i} style={{ padding:'10px 14px', borderBottom:`1px solid ${t.border}`, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ fontWeight:700, fontSize:13, minWidth:96, color:t.text }}>👤 Supervisor {i}</span>
-              <span style={{ fontFamily:'monospace', fontWeight:700, fontSize:15, color:'#16A34A' }}>{fmtN(c.psq)}</span>
+              <span style={{ fontFamily:'monospace', fontWeight:700, fontSize:15, color:t.primary }}>{fmtN(c.psq)}</span>
               <span style={{ fontSize:11, color:t.textMuted, flex:1, textAlign:'right' }}>{physDesc(c)}</span>
             </div>
           ))}
@@ -2022,8 +2022,8 @@ function FlDetailModal({ fl, P, onClose, t }) {
         </div>
 
         {/* 3 niveles de entrega */}
-        <div style={{ marginTop:14, border:'1px solid #BBF7D0', borderRadius:12, overflow:'hidden' }}>
-          <div style={{ background:'#16A34A', color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:800 }}>
+        <div style={{ marginTop:14, border:`1px solid ${t.border}`, borderRadius:12, overflow:'hidden' }}>
+          <div style={{ background:t.primary, color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:800 }}>
             📋 Qué dar a cada supervisor (por quincena)
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:0 }}>
@@ -2032,15 +2032,15 @@ function FlDetailModal({ fl, P, onClose, t }) {
               ['🗃️','Paquetes',c.paqS===0?'—':c.paqS, c.paqS>0?`${fmtN(c.paqS*c.pzPaq)} flyers`:''],
               ['🗞️','Flyers sueltos',c.pzS===0?'—':fmtN(c.pzS),'unidades individuales'],
             ].map(([ico,lbl,val,sub2],i)=>(
-              <div key={lbl} style={{ padding:'12px 10px', textAlign:'center', background: i%2===0?'#F0FDF4':'#fff', borderRight: i<2?'1px solid #BBF7D0':'' }}>
+              <div key={lbl} style={{ padding:'12px 10px', textAlign:'center', background: i%2===0?t.primaryLight:'#fff', borderRight: i<2?`1px solid ${t.border}`:'' }}>
                 <div style={{ fontSize:20, marginBottom:4 }}>{ico}</div>
-                <div style={{ fontSize:9, fontWeight:700, color:'#166534', textTransform:'uppercase', marginBottom:4 }}>{lbl}</div>
-                <div style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color: val==='—'?'#94a3b8':'#16A34A' }}>{val}</div>
+                <div style={{ fontSize:9, fontWeight:700, color:t.primaryDark, textTransform:'uppercase', marginBottom:4 }}>{lbl}</div>
+                <div style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color: val==='—'?'#94a3b8':t.primary }}>{val}</div>
                 <div style={{ fontSize:9, color:'#6B7280', marginTop:3 }}>{sub2}</div>
               </div>
             ))}
           </div>
-          <div style={{ background:'#DCFCE7', padding:'8px 14px', borderTop:'1px solid #BBF7D0', fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#166534', textAlign:'center' }}>
+          <div style={{ background:t.primaryLight, padding:'8px 14px', borderTop:`1px solid ${t.border}`, fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primaryDark, textAlign:'center' }}>
             ✅ Total por supervisor: {fmtN(c.psq)} flyers
           </div>
         </div>
@@ -2091,7 +2091,7 @@ function FlayersScreen({ t }) {
   return (
     <div className="scroll" style={{ height:'100%', paddingBottom:80 }}>
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg,#16A34A 0%,#052E16 100%)', padding:'52px 16px 14px' }}>
+      <div style={{ background:`linear-gradient(135deg,${t.primary} 0%,${t.primaryDark} 100%)`, padding:'52px 16px 14px' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:12 }}>
           <div>
             <p style={{ color:'rgba(255,255,255,.65)', fontSize:12 }}>Izzi Telecom · Auxiliar Adm.</p>
@@ -2106,7 +2106,7 @@ function FlayersScreen({ t }) {
           {SUBS.map(([id,lbl]) => (
             <button key={id} onClick={()=>setSub(id)}
               style={{ flex:1, padding:'7px 2px', borderRadius:8, border:'none', fontWeight:700, fontSize:10,
-                background: sub===id?'#fff':'transparent', color: sub===id?'#16A34A':'rgba(255,255,255,.7)', cursor:'pointer' }}>
+                background: sub===id?'#fff':'transparent', color: sub===id?t.primary:'rgba(255,255,255,.7)', cursor:'pointer' }}>
               {lbl}
             </button>
           ))}
@@ -2126,7 +2126,7 @@ function FlayersScreen({ t }) {
             ].map(([ico,sub2,val,lbl])=>(
               <div key={lbl} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:11, padding:'8px 13px', flexShrink:0, minWidth:110 }}>
                 <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:2 }}>{ico} {lbl}</div>
-                <div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color: lbl==='/ Sup · Qnc'?'#16A34A':t.text }}>{val}</div>
+                <div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color: lbl==='/ Sup · Qnc'?t.primary:t.text }}>{val}</div>
                 <div style={{ fontSize:9, color:t.textMuted, marginTop:1 }}>{sub2}</div>
               </div>
             ))}
@@ -2135,7 +2135,7 @@ function FlayersScreen({ t }) {
           {/* Filtros de categoría */}
           <div style={{ display:'flex', gap:5, marginBottom:12, overflowX:'auto', paddingBottom:2 }}>
             {['TODOS','EXTERNOS','CAMBACEO','ATC'].map(c=>{
-              const s=FL_CAT_C[c]||{color:'#16A34A',bg:'#DCFCE7'};
+              const s=FL_CAT_C[c]||{color:t.primary,bg:t.primaryLight};
               const active=cat===c;
               return <button key={c} onClick={()=>setCat(c)}
                 style={{ padding:'6px 14px', borderRadius:20, border:`1.5px solid ${active?s.color:t.border}`,
@@ -2163,15 +2163,15 @@ function FlayersScreen({ t }) {
                   </div>
                 </div>
 
-                {/* Caja verde: piezas por supervisor */}
-                <div style={{ background:'#DCFCE7', padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                {/* Caja azul: piezas por supervisor */}
+                <div style={{ background:t.primaryLight, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
                   <div>
-                    <div style={{ fontSize:9, fontWeight:700, color:'#166534', textTransform:'uppercase', letterSpacing:.6, marginBottom:3 }}>Cada supervisor recibe / quincena</div>
+                    <div style={{ fontSize:9, fontWeight:700, color:t.primaryDark, textTransform:'uppercase', letterSpacing:.6, marginBottom:3 }}>Cada supervisor recibe / quincena</div>
                     <div style={{ display:'flex', alignItems:'baseline', gap:5 }}>
-                      <span style={{ fontFamily:'monospace', fontSize:28, fontWeight:900, color:'#16A34A', lineHeight:1 }}>{fmtN(c.psq)}</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:'#16A34A' }}>pzas</span>
+                      <span style={{ fontFamily:'monospace', fontSize:28, fontWeight:900, color:t.primary, lineHeight:1 }}>{fmtN(c.psq)}</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:t.primary }}>pzas</span>
                     </div>
-                    <div style={{ fontSize:11, color:'#166534', marginTop:3, fontWeight:600 }}>{physDesc(c)}</div>
+                    <div style={{ fontSize:11, color:t.primaryDark, marginTop:3, fontWeight:600 }}>{physDesc(c)}</div>
                   </div>
                   {c.sob>0 && (
                     <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'7px 12px', textAlign:'center', flexShrink:0 }}>
@@ -2186,22 +2186,22 @@ function FlayersScreen({ t }) {
                 <div style={{ padding:'8px 14px 12px' }}>
                   <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(P.sup,4)}, 1fr)`, gap:6 }}>
                     {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
-                      <div key={i} style={{ background:'#F0FDF4', borderRadius:10, padding:'8px 7px', border:'1px solid #BBF7D0' }}>
-                        <div style={{ fontSize:9, color:'#166534', fontWeight:700, marginBottom:5, textAlign:'center' }}>👤 Sup {i}</div>
+                      <div key={i} style={{ background:t.primaryLight, borderRadius:10, padding:'8px 7px', border:`1px solid ${t.border}` }}>
+                        <div style={{ fontSize:9, color:t.primaryDark, fontWeight:700, marginBottom:5, textAlign:'center' }}>👤 Sup {i}</div>
                         {c.cajC>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
                           <span style={{ fontSize:10 }}>📦</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>{c.cajC}</span>
-                          <span style={{ fontSize:9, color:'#166534' }}>caja{c.cajC!==1?'s':''}</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{c.cajC}</span>
+                          <span style={{ fontSize:9, color:t.primaryDark }}>caja{c.cajC!==1?'s':''}</span>
                         </div>}
                         {c.paqS>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
                           <span style={{ fontSize:10 }}>🗃️</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>{c.paqS}</span>
-                          <span style={{ fontSize:9, color:'#166534' }}>paq.</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{c.paqS}</span>
+                          <span style={{ fontSize:9, color:t.primaryDark }}>paq.</span>
                         </div>}
                         {c.pzS>0 && <div style={{ display:'flex', alignItems:'center', gap:4 }}>
                           <span style={{ fontSize:10 }}>🗞️</span>
-                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#059669' }}>{fmtN(c.pzS)}</span>
-                          <span style={{ fontSize:9, color:'#166534' }}>flyers</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:t.primary }}>{fmtN(c.pzS)}</span>
+                          <span style={{ fontSize:9, color:t.primaryDark }}>flyers</span>
                         </div>}
                         {c.cajC===0 && c.paqS===0 && c.pzS===0 && <div style={{ fontSize:9, color:'#9CA3AF', textAlign:'center' }}>0</div>}
                       </div>
@@ -2212,7 +2212,7 @@ function FlayersScreen({ t }) {
               </div>
             );
           })}
-          {shown.length===0 && <div className="empty-state"><div className="empty-icon"><Layers size={28} color="#16A34A"/></div><p style={{fontWeight:600}}>Sin flyers en esta categoría</p></div>}
+          {shown.length===0 && <div className="empty-state"><div className="empty-icon"><Layers size={28} color={t.primary}/></div><p style={{fontWeight:600}}>Sin flyers en esta categoría</p></div>}
         </>}
 
         {/* ══ CONSULTA ══ */}
@@ -2224,14 +2224,14 @@ function FlayersScreen({ t }) {
             {srch && <button onClick={()=>setSrch('')} style={{ background:'none', border:'none', color:t.textMuted, cursor:'pointer' }}><X size={14}/></button>}
           </div>
           {srch.trim().length<2
-            ? <div className="empty-state"><div className="empty-icon"><Search size={28} color="#16A34A"/></div><p style={{fontWeight:600}}>Escribe al menos 2 caracteres</p></div>
+            ? <div className="empty-state"><div className="empty-icon"><Search size={28} color={t.primary}/></div><p style={{fontWeight:600}}>Escribe al menos 2 caracteres</p></div>
             : srchR.length===0
-              ? <div className="empty-state"><div className="empty-icon"><Search size={28} color="#16A34A"/></div><p>Sin resultados para "<strong>{srch}</strong>"</p></div>
+              ? <div className="empty-state"><div className="empty-icon"><Search size={28} color={t.primary}/></div><p>Sin resultados para "<strong>{srch}</strong>"</p></div>
               : srchR.map(f=>{
                   const c=calcFl(f,P);
                   return (
                     <div key={f.id} className="card" style={{ marginBottom:12, overflow:'hidden' }}>
-                      <div style={{ background:'linear-gradient(135deg,#16A34A,#052E16)', padding:'14px 16px' }}>
+                      <div style={{ background:`linear-gradient(135deg,${t.primary},${t.primaryDark})`, padding:'14px 16px' }}>
                         <FlCatBadge cat={f.cat}/>
                         <div style={{ color:'#fff', fontSize:16, fontWeight:800, marginTop:6 }}>{f.name}</div>
                         <div style={{ color:'rgba(255,255,255,.7)', fontSize:12, marginTop:2 }}>
@@ -2243,7 +2243,7 @@ function FlayersScreen({ t }) {
                           {[['/ Quincena',fmtN(Math.floor(c.qnc)),false],['/ Sup·Qnc',fmtN(c.psq),false],['Sobrante',c.sob,true]].map(([l,v,s])=>(
                             <div key={l} style={{ textAlign:'center', background: s&&c.sob>0?'#FEF2F2':t.cardAlt, borderRadius:8, padding:'7px 4px', border:`1px solid ${s&&c.sob>0?'#FECACA':t.border}` }}>
                               <div style={{ fontSize:9, fontWeight:700, color: s&&c.sob>0?'#DC2626':t.textMuted, textTransform:'uppercase' }}>{l}</div>
-                              <div style={{ fontFamily:'monospace', fontWeight:800, fontSize:16, color: s?(c.sob>0?'#DC2626':'#16A34A'):'#16A34A' }}>{v}</div>
+                              <div style={{ fontFamily:'monospace', fontWeight:800, fontSize:16, color: s?(c.sob>0?'#DC2626':t.primary):t.primary }}>{v}</div>
                             </div>
                           ))}
                         </div>
@@ -2251,7 +2251,7 @@ function FlayersScreen({ t }) {
                         {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
                           <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 0', borderBottom:`1px solid ${t.border}` }}>
                             <span style={{ fontWeight:700, fontSize:13, minWidth:80 }}>👤 Sup {i}</span>
-                            <span style={{ fontFamily:'monospace', fontSize:15, fontWeight:800, color:'#16A34A' }}>{fmtN(c.psq)}</span>
+                            <span style={{ fontFamily:'monospace', fontSize:15, fontWeight:800, color:t.primary }}>{fmtN(c.psq)}</span>
                             <span style={{ fontSize:11, color:t.textMuted, flex:1, textAlign:'right' }}>{physDesc(c)}</span>
                           </div>
                         ))}
@@ -2265,7 +2265,7 @@ function FlayersScreen({ t }) {
 
         {/* ══ GESTIÓN ══ */}
         {sub==='gestion' && <>
-          <button onClick={()=>openForm()} style={{ width:'100%', padding:'12px', borderRadius:12, background:'#16A34A', color:'#fff', border:'none', fontWeight:700, fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:14 }}>
+          <button onClick={()=>openForm()} style={{ width:'100%', padding:'12px', borderRadius:12, background:t.primary, color:'#fff', border:'none', fontWeight:700, fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:14 }}>
             <Plus size={18}/>Agregar Flyer
           </button>
           {FL_CATS.map(c=>{
@@ -2285,7 +2285,7 @@ function FlayersScreen({ t }) {
                         <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>
                           {f.cG>0 && <span>📦{f.cG}cj×{f.paqCG||4}paq×{fmtN(f.pzPaq||1125)} </span>}
                           {f.cC>0 && <span>🗃️{f.cC}×{fmtN(f.pCC)} </span>}
-                          = <strong style={{color:'#16A34A'}}>{fmtN(cv.tot)}</strong>
+                          = <strong style={{color:t.primary}}>{fmtN(cv.tot)}</strong>
                         </div>
                       </div>
                       <button onClick={()=>openForm(f.id)} style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:8, padding:'7px 9px', cursor:'pointer', color:t.textSub, display:'flex', alignItems:'center' }}><Edit3 size={13}/></button>
@@ -2308,9 +2308,9 @@ function FlayersScreen({ t }) {
                 <input type="number" value={P[k]} min={1} onChange={e=>saveP({...P,[k]:+e.target.value||1})} style={{ fontFamily:'monospace', fontSize:15, fontWeight:700 }}/>
               </div>
             ))}
-            <div style={{ background:'#DCFCE7', borderRadius:10, padding:12, marginTop:6, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div style={{ background:t.primaryLight, borderRadius:10, padding:12, marginTop:6, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {[['Supervisores',P.sup],['Entregas/Qnc',P.ent],['Paquetes/Caja',P.pxcaja],['Pzas/Paquete',fmtN(P.pxpaq)],['Pzas/Caja Grande',fmtN(pcg)]].map(([l,v])=>(
-                <div key={l}><div style={{ fontSize:9, fontWeight:700, color:'#16A34A', textTransform:'uppercase' }}>{l}</div><div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color:t.text }}>{v}</div></div>
+                <div key={l}><div style={{ fontSize:9, fontWeight:700, color:t.primary, textTransform:'uppercase' }}>{l}</div><div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color:t.text }}>{v}</div></div>
               ))}
             </div>
           </div>
@@ -2340,28 +2340,28 @@ function FlayersScreen({ t }) {
               <select value={form.cat} onChange={setf('cat')}>{FL_CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
             </div>
             {/* ── CAJA GRANDE ── */}
-            <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:12, padding:'13px', marginBottom:11 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:'#166534', marginBottom:10 }}>📦 Caja Grande</div>
+            <div style={{ background:t.primaryLight, border:`1px solid ${t.border}`, borderRadius:12, padding:'13px', marginBottom:11 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:t.primaryDark, marginBottom:10 }}>📦 Caja Grande</div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:9 }}>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Número de cajas</label>
+                  <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Número de cajas</label>
                   <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff', fontSize:16, fontWeight:700 }}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Paquetes por caja</label>
+                  <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Paquetes por caja</label>
                   <input type="number" value={form.paqCG} min={1} onChange={setf('paqCG')} style={{ background:'#fff' }} placeholder="Ej: 4"/>
                 </div>
               </div>
               <div>
-                <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Flyers por paquete</label>
+                <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Flyers por paquete</label>
                 <input type="number" value={form.pzPaq} min={1} onChange={setf('pzPaq')} style={{ background:'#fff' }} placeholder="Ej: 1125"/>
               </div>
               {(+form.cG>0 && +form.paqCG>0 && +form.pzPaq>0) && (
-                <div style={{ marginTop:8, background:'#DCFCE7', borderRadius:8, padding:'7px 10px' }}>
-                  <span style={{ fontSize:11, color:'#166534' }}>1 caja = </span>
-                  <span style={{ fontFamily:'monospace', fontWeight:700, color:'#16A34A' }}>{form.paqCG} paq. × {fmtN(+form.pzPaq)} = {fmtN(+form.paqCG * +form.pzPaq)} flyers</span>
-                  <span style={{ fontSize:11, color:'#166534', marginLeft:8 }}>| Total cajas: </span>
-                  <span style={{ fontFamily:'monospace', fontWeight:800, color:'#16A34A' }}>{fmtN(+form.cG * +form.paqCG * +form.pzPaq)}</span>
+                <div style={{ marginTop:8, background:'#fff', borderRadius:8, padding:'7px 10px', border:`1px solid ${t.border}` }}>
+                  <span style={{ fontSize:11, color:t.primaryDark }}>1 caja = </span>
+                  <span style={{ fontFamily:'monospace', fontWeight:700, color:t.primary }}>{form.paqCG} paq. × {fmtN(+form.pzPaq)} = {fmtN(+form.paqCG * +form.pzPaq)} flyers</span>
+                  <span style={{ fontSize:11, color:t.primaryDark, marginLeft:8 }}>| Total cajas: </span>
+                  <span style={{ fontFamily:'monospace', fontWeight:800, color:t.primary }}>{fmtN(+form.cG * +form.paqCG * +form.pzPaq)}</span>
                 </div>
               )}
             </div>
@@ -2388,7 +2388,7 @@ function FlayersScreen({ t }) {
 
             {/* ── TOTAL ── */}
             {(+form.cG>0||+form.cC>0) && (
-              <div style={{ background:'#16A34A', borderRadius:10, padding:'10px 14px', marginBottom:11, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <div style={{ background:t.primary, borderRadius:10, padding:'10px 14px', marginBottom:11, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <span style={{ color:'rgba(255,255,255,.75)', fontSize:12, fontWeight:700 }}>TOTAL FLYERS</span>
                 <span style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color:'#fff' }}>
                   {fmtN((+form.cG * +form.paqCG * +form.pzPaq) + (+form.cC * +form.pCC))}
@@ -2398,7 +2398,7 @@ function FlayersScreen({ t }) {
             {fErr && <div style={{ color:'#DC2626', fontSize:12, fontWeight:700, background:'#FEF2F2', padding:'8px 12px', borderRadius:8, marginBottom:10 }}>{fErr}</div>}
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={()=>setShowForm(false)} style={{ flex:1, padding:12, borderRadius:10, background:t.cardAlt, color:t.textSub, border:`1px solid ${t.border}`, fontWeight:700, cursor:'pointer' }}>Cancelar</button>
-              <button onClick={saveForm} style={{ flex:2, padding:12, borderRadius:10, background:'#16A34A', color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}><CheckCircle2 size={16}/>Guardar</button>
+              <button onClick={saveForm} style={{ flex:2, padding:12, borderRadius:10, background:t.primary, color:'#fff', border:'none', fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}><CheckCircle2 size={16}/>Guardar</button>
             </div>
           </div>
         </div>
