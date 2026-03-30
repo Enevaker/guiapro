@@ -2004,20 +2004,20 @@ function PullToRefresh({ children, t }) {
 // ════════════════════════════════════════════════════════════
 // FLYERS — Control de Distribución Izzi Telecom
 // ════════════════════════════════════════════════════════════
-// paqCG = paquetes por caja grande  |  pzPaq = flyers por paquete  |  pCC = flyers en caja chica
+// pCG = flyers por caja grande  |  pCC = flyers por caja chica
 const DEF_FLAYERS = [
-  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, paqCG:4, pzPaq:1125, cC:1, pCC:3188 },
-  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, paqCG:4, pzPaq:1125, cC:1, pCC:2306 },
-  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  paqCG:4, pzPaq:1125, cC:1, pCC:4315 },
-  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, paqCG:4, pzPaq:1125, cC:1, pCC:1500 },
-  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  paqCG:4, pzPaq:1125, cC:1, pCC:3300 },
-  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  paqCG:4, pzPaq:1125, cC:1, pCC:3300 },
-  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  paqCG:4, pzPaq:1125, cC:1, pCC:1000 },
-  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:1232 },
-  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:2464 },
-  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:924  },
+  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, pCG:4500, cC:1, pCC:3188 },
+  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, pCG:4500, cC:1, pCC:2306 },
+  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  pCG:4500, cC:1, pCC:4315 },
+  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, pCG:4500, cC:1, pCC:1500 },
+  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
+  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
+  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  pCG:4500, cC:1, pCC:1000 },
+  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:1232 },
+  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:2464 },
+  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:924  },
 ];
-const DEF_FL_P = { sup:4, ent:2, pxcaja:4, pxpaq:1125 };
+const DEF_FL_P = { sup:4, ent:2 };
 const FL_LS_F  = 'izzi_flyers_v2';
 const FL_LS_P  = 'izzi_params_v2';
 const FL_CATS  = ['EXTERNOS','CAMBACEO','ATC'];
@@ -2029,19 +2029,15 @@ const FL_CAT_C = {
 const fmtN = n => Number(n).toLocaleString('es-MX');
 
 function calcFl(f, P) {
-  const paqCG = f.paqCG || 4;          // paquetes por caja grande
-  const pzPaq = f.pzPaq || 1125;        // flyers por paquete
-  const pcg   = paqCG * pzPaq;          // flyers por caja grande
-  const tot   = f.cG * pcg + f.cC * f.pCC;
-  const qnc   = tot / P.ent;
-  const psq   = Math.floor(tot / P.sup / P.ent);
-  const sob   = Math.floor(qnc) % P.sup;
-  // Desglose en 3 niveles por supervisor
-  const cajC  = Math.floor(psq / pcg);  // cajas grandes completas
-  const rem   = psq % pcg;
-  const paqS  = Math.floor(rem / pzPaq);// paquetes sueltos
-  const pzS   = rem % pzPaq;            // flyers sueltos
-  return { tot, qnc, psq, sob, cajC, paqS, pzS, pcg, pzPaq, paqCG };
+  // Compatibilidad: pCG directo, o paqCG×pzPaq si viene de datos viejos
+  const pcg  = f.pCG || (f.paqCG||4) * (f.pzPaq||1125);
+  const tot  = f.cG * pcg + f.cC * (f.pCC||0);
+  const qnc  = tot / P.ent;
+  const psq  = Math.floor(tot / P.sup / P.ent);
+  const sob  = Math.floor(qnc) % P.sup;
+  const cajC = Math.floor(psq / pcg);   // cajas grandes completas
+  const pzS  = psq % pcg;              // flyers sueltos
+  return { tot, qnc, psq, sob, cajC, pzS, pcg };
 }
 
 function FlCatBadge({ cat }) {
@@ -2052,8 +2048,7 @@ function FlCatBadge({ cat }) {
 function physDesc(c) {
   const p = [];
   if (c.cajC > 0) p.push(`${c.cajC} caja${c.cajC!==1?'s':''}`);
-  if (c.paqS > 0) p.push(`${c.paqS} paq.`);
-  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} flyers`);
+  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} flyers sueltos`);
   return p.join(' + ') || '0';
 }
 
@@ -2072,7 +2067,7 @@ function FlDetailModal({ fl, P, onClose, t }) {
 
         <div style={{ fontSize:11, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.6, marginBottom:8 }}>📊 Inventario</div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:14 }}>
-          {[['Cajas Grandes', fl.cG],['Pzas/Caja Gde',fmtN(c.pcg)],['Cajas Chicas',`${fl.cC}×${fmtN(fl.pCC)}`],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
+          {[['Cajas Grandes', fl.cG],['Flyers/Caja Gde',fmtN(c.pcg)],['Cajas Chicas',fl.cC],['Flyers/Caja Chica',fmtN(fl.pCC)],['Total Piezas',fmtN(c.tot)]].map(([l,v]) => (
             <div key={l} style={{ background:t.cardAlt, borderRadius:10, padding:'10px 12px', border:`1px solid ${t.border}` }}>
               <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', marginBottom:3 }}>{l}</div>
               <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:700, color: l==='Total Piezas'?t.primary:t.text }}>{v}</div>
@@ -2105,21 +2100,20 @@ function FlDetailModal({ fl, P, onClose, t }) {
           {c.sob>0 && <div style={{ background:'#FEF2F2', padding:'8px 14px', fontSize:12, fontWeight:700, color:'#DC2626' }}>⚠️ Sobrante: {c.sob} pieza{c.sob!==1?'s':''} — distribuir manualmente</div>}
         </div>
 
-        {/* 3 niveles de entrega */}
+        {/* Desglose por supervisor */}
         <div style={{ marginTop:14, border:`1px solid ${t.border}`, borderRadius:12, overflow:'hidden' }}>
           <div style={{ background:t.primary, color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:800 }}>
             📋 Qué dar a cada supervisor (por quincena)
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:0 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:0 }}>
             {[
-              ['📦','Cajas',c.cajC===0?'—':c.cajC, c.cajC>0?`${fmtN(c.cajC*c.pcg)} flyers`:''],
-              ['🗃️','Paquetes',c.paqS===0?'—':c.paqS, c.paqS>0?`${fmtN(c.paqS*c.pzPaq)} flyers`:''],
-              ['🗞️','Flyers sueltos',c.pzS===0?'—':fmtN(c.pzS),'unidades individuales'],
+              ['📦','Cajas completas', c.cajC===0?'—':c.cajC, c.cajC>0?`${fmtN(c.cajC*c.pcg)} flyers`:''],
+              ['🗞️','Flyers sueltos',  c.pzS===0?'—':fmtN(c.pzS),'unidades individuales'],
             ].map(([ico,lbl,val,sub2],i)=>(
-              <div key={lbl} style={{ padding:'12px 10px', textAlign:'center', background: i%2===0?t.primaryLight:'#fff', borderRight: i<2?`1px solid ${t.border}`:'' }}>
-                <div style={{ fontSize:20, marginBottom:4 }}>{ico}</div>
+              <div key={lbl} style={{ padding:'14px 10px', textAlign:'center', background: i===0?t.primaryLight:'#fff', borderRight: i===0?`1px solid ${t.border}`:'' }}>
+                <div style={{ fontSize:22, marginBottom:4 }}>{ico}</div>
                 <div style={{ fontSize:9, fontWeight:700, color:t.primaryDark, textTransform:'uppercase', marginBottom:4 }}>{lbl}</div>
-                <div style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color: val==='—'?'#94a3b8':t.primary }}>{val}</div>
+                <div style={{ fontFamily:'monospace', fontSize:24, fontWeight:900, color: val==='—'?'#94a3b8':t.primary }}>{val}</div>
                 <div style={{ fontSize:9, color:'#6B7280', marginTop:3 }}>{sub2}</div>
               </div>
             ))}
@@ -2144,13 +2138,12 @@ function FlayersScreen({ t }) {
   const [detail, setDetail] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]   = useState(null);
-  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, paqCG:4, pzPaq:1125, cC:1, pCC:0 });
+  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, pCG:4500, cC:0, pCC:0 });
   const [fErr, setFErr] = useState('');
   const [srch, setSrch] = useState('');
 
   const saveF = f => { setFls(f); localStorage.setItem(FL_LS_F, JSON.stringify(f)); };
   const saveP = p => { setP(p);  localStorage.setItem(FL_LS_P, JSON.stringify(p)); };
-  const pcg   = P.pxcaja * P.pxpaq;
   const tot   = fls.reduce((a,f)=>{ const c=calcFl(f,P); return { tp:a.tp+c.tot, cG:a.cG+f.cG, cC:a.cC+f.cC }; },{ tp:0,cG:0,cC:0 });
   const shown = cat==='TODOS' ? fls : fls.filter(f=>f.cat===cat);
   const srchR = srch.trim().length>=2 ? fls.filter(f=>f.name.toLowerCase().includes(srch.toLowerCase())) : [];
@@ -2158,14 +2151,15 @@ function FlayersScreen({ t }) {
 
   const openForm = (id=null) => {
     setEditId(id); setFErr('');
-    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,paqCG:f.paqCG||4,pzPaq:f.pzPaq||1125,cC:f.cC,pCC:f.pCC}); }
-    else setForm({name:'',cat:'EXTERNOS',cG:0,paqCG:4,pzPaq:1125,cC:1,pCC:0});
+    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,pCG:f.pCG||(f.paqCG||4)*(f.pzPaq||1125),cC:f.cC,pCC:f.pCC}); }
+    else setForm({name:'',cat:'EXTERNOS',cG:0,pCG:4500,cC:0,pCC:0});
     setShowForm(true);
   };
   const saveForm = () => {
     if (!form.name.trim()) { setFErr('Ingresa el nombre del flyer'); return; }
-    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,paqCG:+form.paqCG||4,pzPaq:+form.pzPaq||1125,cC:+form.cC||0,pCC:+form.pCC||0}:f));
-    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,paqCG:+form.paqCG||4,pzPaq:+form.pzPaq||1125,cC:+form.cC||0,pCC:+form.pCC||0}]); }
+    const data = { name:form.name, cat:form.cat, cG:+form.cG||0, pCG:+form.pCG||0, cC:+form.cC||0, pCC:+form.pCC||0 };
+    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...data}:f));
+    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...data}]); }
     setShowForm(false);
   };
   const delFl = id => { const f=fls.find(x=>x.id===id); if(!window.confirm(`¿Eliminar "${f.name}"?`))return; saveF(fls.filter(x=>x.id!==id)); };
@@ -2266,17 +2260,16 @@ function FlayersScreen({ t }) {
                   )}
                 </div>
 
-                {/* Fila inferior: 3 columnas en un solo bloque */}
+                {/* Fila inferior: cajas + sueltos */}
                 <div style={{ display:'flex', margin:'10px 14px 14px', border:`1px solid ${t.border}`, borderRadius:10, overflow:'hidden' }}>
                   {[
-                    ['📦', c.cajC===0?'—':c.cajC,      'Cajas',          c.cajC>0],
-                    ['🗃️', c.paqS===0?'—':c.paqS,      'Paquetes',       c.paqS>0],
-                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'Flyers sueltos', c.pzS>0],
+                    ['📦', c.cajC===0?'—':c.cajC,      'Cajas completas',  c.cajC>0],
+                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'Flyers sueltos',   c.pzS>0],
                   ].map(([ico,val,lbl,hasVal],i)=>(
-                    <div key={lbl} style={{ flex:1, textAlign:'center', padding:'9px 4px', background: i%2===0?t.cardAlt:t.card, borderRight: i<2?`1px solid ${t.border}`:'none' }}>
-                      <div style={{ fontSize:13, marginBottom:2 }}>{ico}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:16, fontWeight:900, color:hasVal?t.primary:'#94a3b8' }}>{val}</div>
-                      <div style={{ fontSize:8, color:t.textMuted, fontWeight:600, marginTop:1 }}>{lbl}</div>
+                    <div key={lbl} style={{ flex:1, textAlign:'center', padding:'10px 4px', background: i===0?t.cardAlt:t.card, borderRight: i===0?`1px solid ${t.border}`:'none' }}>
+                      <div style={{ fontSize:14, marginBottom:2 }}>{ico}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:900, color:hasVal?t.primary:'#94a3b8' }}>{val}</div>
+                      <div style={{ fontSize:9, color:t.textMuted, fontWeight:600, marginTop:2 }}>{lbl}</div>
                     </div>
                   ))}
                 </div>
@@ -2355,7 +2348,7 @@ function FlayersScreen({ t }) {
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:t.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</div>
                         <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>
-                          {f.cG>0 && <span>📦{f.cG}cj×{f.paqCG||4}paq×{fmtN(f.pzPaq||1125)} </span>}
+                          {f.cG>0 && <span>📦{f.cG}×{fmtN(f.pCG||4500)} </span>}
                           {f.cC>0 && <span>🗃️{f.cC}×{fmtN(f.pCC)} </span>}
                           = <strong style={{color:t.primary}}>{fmtN(cv.tot)}</strong>
                         </div>
@@ -2374,14 +2367,14 @@ function FlayersScreen({ t }) {
         {sub==='config' && <>
           <div className="card" style={{ padding:16, marginBottom:12 }}>
             <div style={{ fontSize:15, fontWeight:800, color:t.text, marginBottom:13 }}>⚙️ Parámetros Globales</div>
-            {[['sup','👥 Supervisores'],['ent','📅 Entregas / Quincena'],['pxcaja','📦 Paquetes / Caja Grande'],['pxpaq','🗞️ Piezas / Paquete']].map(([k,lbl])=>(
+            {[['sup','👥 Supervisores'],['ent','📅 Entregas / Quincena']].map(([k,lbl])=>(
               <div key={k} style={{ marginBottom:11 }}>
                 <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>{lbl}</label>
                 <input type="number" value={P[k]} min={1} onChange={e=>saveP({...P,[k]:+e.target.value||1})} style={{ fontFamily:'monospace', fontSize:15, fontWeight:700 }}/>
               </div>
             ))}
             <div style={{ background:t.primaryLight, borderRadius:10, padding:12, marginTop:6, display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              {[['Supervisores',P.sup],['Entregas/Qnc',P.ent],['Paquetes/Caja',P.pxcaja],['Pzas/Paquete',fmtN(P.pxpaq)],['Pzas/Caja Grande',fmtN(pcg)]].map(([l,v])=>(
+              {[['Supervisores',P.sup],['Entregas/Qnc',P.ent]].map(([l,v])=>(
                 <div key={l}><div style={{ fontSize:9, fontWeight:700, color:t.primary, textTransform:'uppercase' }}>{l}</div><div style={{ fontFamily:'monospace', fontSize:16, fontWeight:800, color:t.text }}>{v}</div></div>
               ))}
             </div>
@@ -2411,51 +2404,46 @@ function FlayersScreen({ t }) {
               <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Categoría *</label>
               <select value={form.cat} onChange={setf('cat')}>{FL_CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
             </div>
-            {/* ── CAJA GRANDE ── */}
-            <div style={{ background:t.primaryLight, border:`1px solid ${t.border}`, borderRadius:12, padding:'13px', marginBottom:11 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t.primaryDark, marginBottom:10 }}>📦 Caja Grande</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:9 }}>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Número de cajas</label>
-                  <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff', fontSize:16, fontWeight:700 }}/>
+            {/* ── CAJAS ── */}
+            <div style={{ border:`1px solid ${t.border}`, borderRadius:12, overflow:'hidden', marginBottom:11 }}>
+              {/* Caja Grande */}
+              <div style={{ background:t.primaryLight, padding:'12px 13px', borderBottom:`1px solid ${t.border}` }}>
+                <div style={{ fontSize:13, fontWeight:800, color:t.primaryDark, marginBottom:10 }}>📦 Caja Grande</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Número de cajas</label>
+                    <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff', fontSize:16, fontWeight:700 }}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Flyers por caja</label>
+                    <input type="number" value={form.pCG} min={0} onChange={setf('pCG')} style={{ background:'#fff', fontSize:16, fontWeight:700 }} placeholder="Ej: 4500"/>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Paquetes por caja</label>
-                  <input type="number" value={form.paqCG} min={1} onChange={setf('paqCG')} style={{ background:'#fff' }} placeholder="Ej: 4"/>
-                </div>
+                {(+form.cG>0 && +form.pCG>0) && (
+                  <div style={{ marginTop:8, fontSize:11, color:t.primaryDark, fontWeight:600 }}>
+                    Total: <span style={{ fontFamily:'monospace', fontWeight:800, color:t.primary }}>{fmtN(+form.cG * +form.pCG)} flyers</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <label style={{ fontSize:11, fontWeight:700, color:t.primaryDark, display:'block', marginBottom:4 }}>Flyers por paquete</label>
-                <input type="number" value={form.pzPaq} min={1} onChange={setf('pzPaq')} style={{ background:'#fff' }} placeholder="Ej: 1125"/>
+              {/* Caja Chica */}
+              <div style={{ background:t.cardAlt, padding:'12px 13px' }}>
+                <div style={{ fontSize:13, fontWeight:800, color:t.textSub, marginBottom:10 }}>🗃️ Caja Chica</div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Número de cajas</label>
+                    <input type="number" value={form.cC} min={0} onChange={setf('cC')} style={{ fontSize:16, fontWeight:700 }}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Flyers por caja</label>
+                    <input type="number" value={form.pCC} min={0} onChange={setf('pCC')} style={{ fontSize:16, fontWeight:700 }} placeholder="Ej: 3188"/>
+                  </div>
+                </div>
+                {(+form.cC>0 && +form.pCC>0) && (
+                  <div style={{ marginTop:8, fontSize:11, color:t.textSub, fontWeight:600 }}>
+                    Total: <span style={{ fontFamily:'monospace', fontWeight:800, color:t.textSub }}>{fmtN(+form.cC * +form.pCC)} flyers</span>
+                  </div>
+                )}
               </div>
-              {(+form.cG>0 && +form.paqCG>0 && +form.pzPaq>0) && (
-                <div style={{ marginTop:8, background:'#fff', borderRadius:8, padding:'7px 10px', border:`1px solid ${t.border}` }}>
-                  <span style={{ fontSize:11, color:t.primaryDark }}>1 caja = </span>
-                  <span style={{ fontFamily:'monospace', fontWeight:700, color:t.primary }}>{form.paqCG} paq. × {fmtN(+form.pzPaq)} = {fmtN(+form.paqCG * +form.pzPaq)} flyers</span>
-                  <span style={{ fontSize:11, color:t.primaryDark, marginLeft:8 }}>| Total cajas: </span>
-                  <span style={{ fontFamily:'monospace', fontWeight:800, color:t.primary }}>{fmtN(+form.cG * +form.paqCG * +form.pzPaq)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* ── CAJA CHICA ── */}
-            <div style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:12, padding:'13px', marginBottom:11 }}>
-              <div style={{ fontSize:13, fontWeight:800, color:t.textSub, marginBottom:10 }}>🗃️ Caja Chica</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Número de cajas</label>
-                  <input type="number" value={form.cC} min={0} onChange={setf('cC')} style={{ fontSize:16, fontWeight:700 }}/>
-                </div>
-                <div>
-                  <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Flyers en caja chica</label>
-                  <input type="number" value={form.pCC} min={0} onChange={setf('pCC')} placeholder="Ej: 3188"/>
-                </div>
-              </div>
-              {(+form.cC>0 && +form.pCC>0) && (
-                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.textSub }}>
-                  Total caja chica: {fmtN(+form.cC * +form.pCC)} flyers
-                </div>
-              )}
             </div>
 
             {/* ── TOTAL ── */}
@@ -2463,7 +2451,7 @@ function FlayersScreen({ t }) {
               <div style={{ background:t.primary, borderRadius:10, padding:'10px 14px', marginBottom:11, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                 <span style={{ color:'rgba(255,255,255,.75)', fontSize:12, fontWeight:700 }}>TOTAL FLYERS</span>
                 <span style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color:'#fff' }}>
-                  {fmtN((+form.cG * +form.paqCG * +form.pzPaq) + (+form.cC * +form.pCC))}
+                  {fmtN((+form.cG * +form.pCG) + (+form.cC * +form.pCC))}
                 </span>
               </div>
             )}
