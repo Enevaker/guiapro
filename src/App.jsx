@@ -2230,54 +2230,53 @@ function FlayersScreen({ t }) {
             })}
           </div>
 
-          {/* Tarjetas con desglose inline por supervisor */}
+          {/* Tarjetas rediseñadas */}
           {shown.map(f=>{
             const c=calcFl(f,P);
             return (
-              <div key={f.id} style={{ background:t.card, borderRadius:14, border:`1px solid ${t.border}`, marginBottom:12, overflow:'hidden' }}>
+              <div key={f.id} style={{ background:t.card, borderRadius:16, border:`1px solid ${t.border}`, marginBottom:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
 
-                {/* Nombre + badge */}
-                <div style={{ padding:'13px 14px 9px' }}>
-                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:5 }}>
-                    <div style={{ fontSize:16, fontWeight:800, color:t.text, flex:1, lineHeight:1.35 }}>{f.name}</div>
+                {/* Encabezado: nombre + badge + total */}
+                <div style={{ padding:'14px 14px 12px', display:'flex', alignItems:'flex-start', gap:10 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:t.text, lineHeight:1.3, marginBottom:5 }}>{f.name}</div>
                     <FlCatBadge cat={f.cat}/>
                   </div>
-                  <div style={{ fontFamily:'monospace', fontSize:11, color:t.textMuted }}>
-                    {f.cG} cj.gdes×{fmtN(c.pcg)} + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:t.text,fontWeight:700}}>{fmtN(c.tot)} pzas</strong>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.5 }}>Total</div>
+                    <div style={{ fontFamily:'monospace', fontSize:15, fontWeight:800, color:t.text }}>{fmtN(c.tot)}</div>
+                    <div style={{ fontSize:9, color:t.textMuted }}>pzas</div>
                   </div>
                 </div>
 
-                {/* Caja azul: piezas por supervisor */}
-                <div style={{ background:t.primaryLight, padding:'10px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 }}>
+                {/* Franja central: cantidad por supervisor */}
+                <div style={{ margin:'0 14px', background:`linear-gradient(135deg,${t.primary},${t.primaryDark})`, borderRadius:12, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div>
-                    <div style={{ fontSize:9, fontWeight:700, color:t.primaryDark, textTransform:'uppercase', letterSpacing:.6, marginBottom:3 }}>Cada supervisor recibe / quincena</div>
-                    <div style={{ display:'flex', alignItems:'baseline', gap:5 }}>
-                      <span style={{ fontFamily:'monospace', fontSize:28, fontWeight:900, color:t.primary, lineHeight:1 }}>{fmtN(c.psq)}</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:t.primary }}>pzas</span>
+                    <div style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,.65)', textTransform:'uppercase', letterSpacing:.7, marginBottom:2 }}>Cada supervisor / quincena</div>
+                    <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
+                      <span style={{ fontFamily:'monospace', fontSize:30, fontWeight:900, color:'#fff', lineHeight:1 }}>{fmtN(c.psq)}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.8)' }}>pzas</span>
                     </div>
-                    <div style={{ fontSize:11, color:t.primaryDark, marginTop:3, fontWeight:600 }}>{physDesc(c)}</div>
                   </div>
                   {c.sob>0 && (
-                    <div style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'7px 12px', textAlign:'center', flexShrink:0 }}>
-                      <div style={{ fontSize:9, fontWeight:700, color:'#DC2626', textTransform:'uppercase' }}>Sobrante</div>
-                      <div style={{ fontFamily:'monospace', fontSize:20, fontWeight:900, color:'#DC2626' }}>{c.sob}</div>
-                      <div style={{ fontSize:9, color:'#DC2626' }}>pzas extra</div>
+                    <div style={{ background:'rgba(0,0,0,.25)', borderRadius:10, padding:'6px 11px', textAlign:'center' }}>
+                      <div style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.7)', textTransform:'uppercase' }}>Sobrante</div>
+                      <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:900, color:'#fde68a' }}>{c.sob}</div>
                     </div>
                   )}
                 </div>
 
-                {/* Desglose en 3 niveles — una sola fila */}
-                {/* Un solo recuadro con las 3 columnas dentro */}
-                <div style={{ margin:'0 14px 12px', background:t.primaryLight, border:`1px solid ${t.border}`, borderRadius:12, display:'flex', overflow:'hidden' }}>
+                {/* Fila inferior: 3 columnas en un solo bloque */}
+                <div style={{ display:'flex', margin:'10px 14px 14px', border:`1px solid ${t.border}`, borderRadius:10, overflow:'hidden' }}>
                   {[
-                    ['📦', c.cajC===0?'—':c.cajC,      'caja'+(c.cajC!==1?'s':''),    c.cajC>0],
-                    ['🗃️', c.paqS===0?'—':c.paqS,      'paquete'+(c.paqS!==1?'s':''), c.paqS>0],
-                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'flyers sueltos',              c.pzS>0],
+                    ['📦', c.cajC===0?'—':c.cajC,      'Cajas',          c.cajC>0],
+                    ['🗃️', c.paqS===0?'—':c.paqS,      'Paquetes',       c.paqS>0],
+                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'Flyers sueltos', c.pzS>0],
                   ].map(([ico,val,lbl,hasVal],i)=>(
-                    <div key={lbl} style={{ flex:1, textAlign:'center', padding:'10px 6px', borderRight: i<2?`1px solid ${t.border}`:'none' }}>
-                      <div style={{ fontSize:15 }}>{ico}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:17, fontWeight:900, color:hasVal?t.primary:'#94a3b8', lineHeight:1.1 }}>{val}</div>
-                      <div style={{ fontSize:9, color:t.primaryDark, fontWeight:600, marginTop:2 }}>{lbl}</div>
+                    <div key={lbl} style={{ flex:1, textAlign:'center', padding:'9px 4px', background: i%2===0?t.cardAlt:t.card, borderRight: i<2?`1px solid ${t.border}`:'none' }}>
+                      <div style={{ fontSize:13, marginBottom:2 }}>{ico}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:16, fontWeight:900, color:hasVal?t.primary:'#94a3b8' }}>{val}</div>
+                      <div style={{ fontSize:8, color:t.textMuted, fontWeight:600, marginTop:1 }}>{lbl}</div>
                     </div>
                   ))}
                 </div>
