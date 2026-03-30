@@ -1918,6 +1918,90 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
 }
 
 // ════════════════════════════════════════════════════════════
+// PULL TO REFRESH
+// ════════════════════════════════════════════════════════════
+function PullToRefresh({ children, t }) {
+  const containerRef = useRef(null);
+  const indicatorRef = useRef(null);
+  const startYRef    = useRef(0);
+  const curYRef      = useRef(0);
+  const pullingRef   = useRef(false);
+  const THRESHOLD    = 70;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const getScrollTop = () => {
+      const s = el.querySelector('.scroll');
+      return s ? s.scrollTop : 0;
+    };
+
+    const onStart = e => {
+      startYRef.current = e.touches[0].clientY;
+      curYRef.current   = e.touches[0].clientY;
+      pullingRef.current = false;
+    };
+
+    const onMove = e => {
+      curYRef.current = e.touches[0].clientY;
+      const dy = curYRef.current - startYRef.current;
+      if (dy > 8 && getScrollTop() === 0) {
+        pullingRef.current = true;
+        const h = Math.min(dy * 0.45, THRESHOLD + 15);
+        const ind = indicatorRef.current;
+        if (ind) {
+          ind.style.height  = h + 'px';
+          ind.style.opacity = '1';
+          ind.style.transition = 'none';
+          const txt = ind.querySelector('.ptr-txt');
+          if (txt) txt.textContent = h >= THRESHOLD ? '⬆ Suelta para recargar' : '⬇ Desliza para recargar';
+        }
+        e.preventDefault();
+      }
+    };
+
+    const onEnd = () => {
+      const dy = curYRef.current - startYRef.current;
+      const ind = indicatorRef.current;
+      if (pullingRef.current && dy * 0.45 >= THRESHOLD) {
+        if (ind) { const txt = ind.querySelector('.ptr-txt'); if (txt) txt.textContent = '⟳ Recargando…'; }
+        setTimeout(() => window.location.reload(), 350);
+      } else {
+        if (ind) {
+          ind.style.transition = 'height .3s ease, opacity .3s ease';
+          ind.style.height  = '0px';
+          ind.style.opacity = '0';
+        }
+      }
+      pullingRef.current = false;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true  });
+    el.addEventListener('touchmove',  onMove,  { passive: false });
+    el.addEventListener('touchend',   onEnd,   { passive: true  });
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove',  onMove);
+      el.removeEventListener('touchend',   onEnd);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      {/* Indicador pull-to-refresh */}
+      <div ref={indicatorRef} style={{
+        height:0, opacity:0, overflow:'hidden', flexShrink:0,
+        background:t.primaryLight, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+      }}>
+        <span className="ptr-txt" style={{ fontSize:13, fontWeight:700, color:t.primary }}>⬇ Desliza para recargar</span>
+      </div>
+      <div style={{ flex:1, overflow:'hidden' }}>{children}</div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════
 // FLYERS — Control de Distribución Izzi Telecom
 // ════════════════════════════════════════════════════════════
 // paqCG = paquetes por caja grande  |  pzPaq = flyers por paquete  |  pCC = flyers en caja chica
@@ -2704,13 +2788,13 @@ export default function App() {
 
   return (
     <div style={{ height:'100%', overflow:'hidden', background:t.bg }}>
-      <div style={{ height:'100%', overflow:'hidden' }}>
+      <PullToRefresh t={t}>
         {tab==='home'       && <HomeScreen user={user} processes={processes} users={users} workspaces={workspaces} activities={activities} onOpen={openProcess} onOpenActivity={openActivity} onCreateNew={() => setCreating(true)} onOpenAdmin={() => setViewAdmin(true)} t={t}/>}
         {tab==='workspaces' && <WorkspacesScreen user={user} workspaces={workspaces} processes={processes} users={users} onOpenWs={openWs} onCreateWs={() => setCreatingWs(true)} t={t}/>}
         {tab==='mine'       && <MyProcessesScreen user={user} processes={processes} users={users} workspaces={workspaces} onOpen={openProcess} onEdit={editProcess} onSubmit={submitProcess} t={t}/>}
         {tab==='flyers'     && <FlayersScreen t={t}/>}
         {tab==='profile'    && <ProfileScreen user={user} users={users} processes={processes} workspaces={workspaces} onLogout={handleLogout} onDarkToggle={() => setDarkMode(d=>!d)} darkMode={darkMode} onOpenAdmin={() => setViewAdmin(true)} onUpdateUser={updateCurrentUser} t={t}/>}
-      </div>
+      </PullToRefresh>
 
       {tab !== 'profile' && tab !== 'workspaces' && tab !== 'flyers' && (
         <button className="fab" onClick={() => setCreating(true)} title="Nuevo proceso"><Plus size={26}/></button>
