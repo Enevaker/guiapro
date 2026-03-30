@@ -1920,17 +1920,18 @@ function ProfileScreen({ user, users, processes, workspaces, onLogout, onDarkTog
 // ════════════════════════════════════════════════════════════
 // FLYERS — Control de Distribución Izzi Telecom
 // ════════════════════════════════════════════════════════════
+// paqCG = paquetes por caja grande  |  pzPaq = flyers por paquete  |  pCC = flyers en caja chica
 const DEF_FLAYERS = [
-  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, pCG:4500, cC:1, pCC:3188 },
-  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, pCG:4500, cC:1, pCC:2306 },
-  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  pCG:4500, cC:1, pCC:4315 },
-  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, pCG:4500, cC:1, pCC:1500 },
-  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
-  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  pCG:4500, cC:1, pCC:3300 },
-  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  pCG:4500, cC:1, pCC:1000 },
-  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:1232 },
-  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:2464 },
-  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  pCG:4500, cC:1, pCC:924  },
+  { id:1,  name:'Flyer Izzi TV Ligth Grilla Externo',     cat:'EXTERNOS', cG:17, paqCG:4, pzPaq:1125, cC:1, pCC:3188 },
+  { id:2,  name:'Flyer Nacional Externo',                  cat:'EXTERNOS', cG:32, paqCG:4, pzPaq:1125, cC:1, pCC:2306 },
+  { id:3,  name:'Flyer Izzi TV + Premium Móvil Externo',  cat:'EXTERNOS', cG:1,  paqCG:4, pzPaq:1125, cC:1, pCC:4315 },
+  { id:4,  name:'Flyer Nacional Interno',                  cat:'CAMBACEO', cG:16, paqCG:4, pzPaq:1125, cC:1, pCC:1500 },
+  { id:5,  name:'Flyer Izzi TV Ligth Grilla Interno',     cat:'CAMBACEO', cG:3,  paqCG:4, pzPaq:1125, cC:1, pCC:3300 },
+  { id:6,  name:'Flyer Izzi TV + Premium Móvil Interno',  cat:'CAMBACEO', cG:3,  paqCG:4, pzPaq:1125, cC:1, pCC:3300 },
+  { id:7,  name:'Flyer Guadalajara Pago Anticipado',      cat:'CAMBACEO', cG:6,  paqCG:4, pzPaq:1125, cC:1, pCC:1000 },
+  { id:8,  name:'Flyer Izzi TV + Premium Móvil ATC',      cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:1232 },
+  { id:9,  name:'Flyer Nacional ATC',                     cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:2464 },
+  { id:10, name:'Flyer Izzi TV Ligth Grilla Interno ATC', cat:'ATC',      cG:0,  paqCG:4, pzPaq:1125, cC:1, pCC:924  },
 ];
 const DEF_FL_P = { sup:4, ent:2, pxcaja:4, pxpaq:1125 };
 const FL_LS_F  = 'izzi_flyers_v2';
@@ -1944,14 +1945,19 @@ const FL_CAT_C = {
 const fmtN = n => Number(n).toLocaleString('es-MX');
 
 function calcFl(f, P) {
-  const pcg  = f.pCG || (P.pxcaja * P.pxpaq);   // piezas por caja grande (propio del flyer)
-  const tot  = f.cG * pcg + f.cC * f.pCC;
-  const qnc  = tot / P.ent;
-  const psq  = Math.floor(tot / P.sup / P.ent);
-  const sob  = Math.floor(qnc) % P.sup;
-  const cajC = Math.floor(psq / pcg);
-  const pzS  = psq % pcg;
-  return { tot, qnc, psq, sob, cajC, pzS, pcg };
+  const paqCG = f.paqCG || 4;          // paquetes por caja grande
+  const pzPaq = f.pzPaq || 1125;        // flyers por paquete
+  const pcg   = paqCG * pzPaq;          // flyers por caja grande
+  const tot   = f.cG * pcg + f.cC * f.pCC;
+  const qnc   = tot / P.ent;
+  const psq   = Math.floor(tot / P.sup / P.ent);
+  const sob   = Math.floor(qnc) % P.sup;
+  // Desglose en 3 niveles por supervisor
+  const cajC  = Math.floor(psq / pcg);  // cajas grandes completas
+  const rem   = psq % pcg;
+  const paqS  = Math.floor(rem / pzPaq);// paquetes sueltos
+  const pzS   = rem % pzPaq;            // flyers sueltos
+  return { tot, qnc, psq, sob, cajC, paqS, pzS, pcg, pzPaq, paqCG };
 }
 
 function FlCatBadge({ cat }) {
@@ -1961,9 +1967,10 @@ function FlCatBadge({ cat }) {
 
 function physDesc(c) {
   const p = [];
-  if (c.cajC > 0) p.push(`${c.cajC} caja${c.cajC!==1?'s gdes':' gde'}`);
-  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} pzas sueltas`);
-  return p.join(' + ') || '0 pzas';
+  if (c.cajC > 0) p.push(`${c.cajC} caja${c.cajC!==1?'s':''}`);
+  if (c.paqS > 0) p.push(`${c.paqS} paq.`);
+  if (c.pzS  > 0) p.push(`${fmtN(c.pzS)} flyers`);
+  return p.join(' + ') || '0';
 }
 
 function FlDetailModal({ fl, P, onClose, t }) {
@@ -2014,12 +2021,32 @@ function FlDetailModal({ fl, P, onClose, t }) {
           {c.sob>0 && <div style={{ background:'#FEF2F2', padding:'8px 14px', fontSize:12, fontWeight:700, color:'#DC2626' }}>⚠️ Sobrante: {c.sob} pieza{c.sob!==1?'s':''} — distribuir manualmente</div>}
         </div>
 
-        <div style={{ marginTop:14, background:'#DCFCE7', borderRadius:10, padding:'12px 14px', fontSize:13, lineHeight:1.9, border:'1px solid #BBF7D0' }}>
-          <div style={{ fontWeight:700, color:'#166534', marginBottom:4 }}>🧮 Desglose físico exacto por supervisor:</div>
-          {c.cajC>0 && <div>📦 <strong>{c.cajC}</strong> caja{c.cajC!==1?'s grandes':' grande'} completa{c.cajC!==1?'s':''} = <span style={{fontFamily:'monospace'}}>{fmtN(c.cajC*c.pcg)}</span> pzas</div>}
-          {c.pzS >0 && <div>🗞️ <strong>{fmtN(c.pzS)}</strong> pieza{c.pzS!==1?'s sueltas':' suelta'}</div>}
-          <div style={{ marginTop:6, fontWeight:800, color:'#16A34A', fontSize:15 }}>✅ Total: {fmtN(c.psq)} pzas por supervisor</div>
+        {/* 3 niveles de entrega */}
+        <div style={{ marginTop:14, border:'1px solid #BBF7D0', borderRadius:12, overflow:'hidden' }}>
+          <div style={{ background:'#16A34A', color:'#fff', padding:'8px 14px', fontSize:12, fontWeight:800 }}>
+            📋 Qué dar a cada supervisor (por quincena)
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:0 }}>
+            {[
+              ['📦','Cajas',c.cajC===0?'—':c.cajC, c.cajC>0?`${fmtN(c.cajC*c.pcg)} flyers`:''],
+              ['🗃️','Paquetes',c.paqS===0?'—':c.paqS, c.paqS>0?`${fmtN(c.paqS*c.pzPaq)} flyers`:''],
+              ['🗞️','Flyers sueltos',c.pzS===0?'—':fmtN(c.pzS),'unidades individuales'],
+            ].map(([ico,lbl,val,sub2],i)=>(
+              <div key={lbl} style={{ padding:'12px 10px', textAlign:'center', background: i%2===0?'#F0FDF4':'#fff', borderRight: i<2?'1px solid #BBF7D0':'' }}>
+                <div style={{ fontSize:20, marginBottom:4 }}>{ico}</div>
+                <div style={{ fontSize:9, fontWeight:700, color:'#166534', textTransform:'uppercase', marginBottom:4 }}>{lbl}</div>
+                <div style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color: val==='—'?'#94a3b8':'#16A34A' }}>{val}</div>
+                <div style={{ fontSize:9, color:'#6B7280', marginTop:3 }}>{sub2}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:'#DCFCE7', padding:'8px 14px', borderTop:'1px solid #BBF7D0', fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#166534', textAlign:'center' }}>
+            ✅ Total por supervisor: {fmtN(c.psq)} flyers
+          </div>
         </div>
+        {c.sob>0 && <div style={{ marginTop:10, background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:10, padding:'10px 14px', color:'#DC2626', fontSize:13, fontWeight:700 }}>
+          ⚠️ Sobrante: {c.sob} flyer{c.sob!==1?'s':''} — distribuir manualmente entre supervisores
+        </div>}
       </div>
     </div>
   );
@@ -2033,7 +2060,7 @@ function FlayersScreen({ t }) {
   const [detail, setDetail] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]   = useState(null);
-  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, pCG:4500, cC:1, pCC:0 });
+  const [form, setForm] = useState({ name:'', cat:'EXTERNOS', cG:0, paqCG:4, pzPaq:1125, cC:1, pCC:0 });
   const [fErr, setFErr] = useState('');
   const [srch, setSrch] = useState('');
 
@@ -2047,14 +2074,14 @@ function FlayersScreen({ t }) {
 
   const openForm = (id=null) => {
     setEditId(id); setFErr('');
-    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,pCG:f.pCG||4500,cC:f.cC,pCC:f.pCC}); }
-    else setForm({name:'',cat:'EXTERNOS',cG:0,pCG:4500,cC:1,pCC:0});
+    if (id) { const f=fls.find(x=>x.id===id); setForm({name:f.name,cat:f.cat,cG:f.cG,paqCG:f.paqCG||4,pzPaq:f.pzPaq||1125,cC:f.cC,pCC:f.pCC}); }
+    else setForm({name:'',cat:'EXTERNOS',cG:0,paqCG:4,pzPaq:1125,cC:1,pCC:0});
     setShowForm(true);
   };
   const saveForm = () => {
     if (!form.name.trim()) { setFErr('Ingresa el nombre del flyer'); return; }
-    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,pCG:+form.pCG||4500,cC:+form.cC||0,pCC:+form.pCC||0}:f));
-    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,pCG:+form.pCG||4500,cC:+form.cC||0,pCC:+form.pCC||0}]); }
+    if (editId) saveF(fls.map(f=>f.id===editId?{...f,...form,cG:+form.cG||0,paqCG:+form.paqCG||4,pzPaq:+form.pzPaq||1125,cC:+form.cC||0,pCC:+form.pCC||0}:f));
+    else { const nid=Math.max(0,...fls.map(f=>f.id))+1; saveF([...fls,{id:nid,...form,cG:+form.cG||0,paqCG:+form.paqCG||4,pzPaq:+form.pzPaq||1125,cC:+form.cC||0,pCC:+form.pCC||0}]); }
     setShowForm(false);
   };
   const delFl = id => { const f=fls.find(x=>x.id===id); if(!window.confirm(`¿Eliminar "${f.name}"?`))return; saveF(fls.filter(x=>x.id!==id)); };
@@ -2155,14 +2182,31 @@ function FlayersScreen({ t }) {
                   )}
                 </div>
 
-                {/* Grid de supervisores */}
-                <div style={{ padding:'8px 14px 12px', display:'grid', gridTemplateColumns:`repeat(${Math.min(P.sup,4)}, 1fr)`, gap:6 }}>
-                  {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
-                    <div key={i} style={{ textAlign:'center', background:'#F0FDF4', borderRadius:9, padding:'7px 4px', border:'1px solid #BBF7D0' }}>
-                      <div style={{ fontSize:9, color:'#166534', fontWeight:600, marginBottom:2 }}>👤 Sup {i}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:15, fontWeight:900, color:'#16A34A' }}>{fmtN(c.psq)}</div>
-                    </div>
-                  ))}
+                {/* Grid de supervisores con 3 niveles */}
+                <div style={{ padding:'8px 14px 12px' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:`repeat(${Math.min(P.sup,4)}, 1fr)`, gap:6 }}>
+                    {Array.from({length:P.sup},(_,i)=>i+1).map(i=>(
+                      <div key={i} style={{ background:'#F0FDF4', borderRadius:10, padding:'8px 7px', border:'1px solid #BBF7D0' }}>
+                        <div style={{ fontSize:9, color:'#166534', fontWeight:700, marginBottom:5, textAlign:'center' }}>👤 Sup {i}</div>
+                        {c.cajC>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
+                          <span style={{ fontSize:10 }}>📦</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>{c.cajC}</span>
+                          <span style={{ fontSize:9, color:'#166534' }}>caja{c.cajC!==1?'s':''}</span>
+                        </div>}
+                        {c.paqS>0 && <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
+                          <span style={{ fontSize:10 }}>🗃️</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#16A34A' }}>{c.paqS}</span>
+                          <span style={{ fontSize:9, color:'#166534' }}>paq.</span>
+                        </div>}
+                        {c.pzS>0 && <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                          <span style={{ fontSize:10 }}>🗞️</span>
+                          <span style={{ fontFamily:'monospace', fontSize:13, fontWeight:800, color:'#059669' }}>{fmtN(c.pzS)}</span>
+                          <span style={{ fontSize:9, color:'#166534' }}>flyers</span>
+                        </div>}
+                        {c.cajC===0 && c.paqS===0 && c.pzS===0 && <div style={{ fontSize:9, color:'#9CA3AF', textAlign:'center' }}>0</div>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
               </div>
@@ -2238,7 +2282,11 @@ function FlayersScreen({ t }) {
                     <div key={f.id} style={{ background:t.card, border:`1px solid ${t.border}`, borderRadius:11, padding:'11px 13px', marginBottom:6, display:'flex', alignItems:'center', gap:9 }}>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:13, fontWeight:700, color:t.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</div>
-                        <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>{f.cG}×{fmtN(f.pCG||cv.pcg)} + {f.cC}×{fmtN(f.pCC)} = <strong style={{color:'#16A34A'}}>{fmtN(cv.tot)} pzas</strong></div>
+                        <div style={{ fontSize:10, color:t.textMuted, fontFamily:'monospace', marginTop:2 }}>
+                          {f.cG>0 && <span>📦{f.cG}cj×{f.paqCG||4}paq×{fmtN(f.pzPaq||1125)} </span>}
+                          {f.cC>0 && <span>🗃️{f.cC}×{fmtN(f.pCC)} </span>}
+                          = <strong style={{color:'#16A34A'}}>{fmtN(cv.tot)}</strong>
+                        </div>
                       </div>
                       <button onClick={()=>openForm(f.id)} style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:8, padding:'7px 9px', cursor:'pointer', color:t.textSub, display:'flex', alignItems:'center' }}><Edit3 size={13}/></button>
                       <button onClick={()=>delFl(f.id)} style={{ background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:8, padding:'7px 9px', cursor:'pointer', color:'#DC2626', display:'flex', alignItems:'center' }}><Trash2 size={13}/></button>
@@ -2291,50 +2339,59 @@ function FlayersScreen({ t }) {
               <label style={{ fontSize:13, fontWeight:600, color:t.textSub, display:'block', marginBottom:5 }}>Categoría *</label>
               <select value={form.cat} onChange={setf('cat')}>{FL_CATS.map(c=><option key={c} value={c}>{c}</option>)}</select>
             </div>
-            {/* Cajas Grandes + piezas por caja grande */}
-            <div style={{ background:'#DCFCE7', border:'1px solid #BBF7D0', borderRadius:11, padding:'12px 13px', marginBottom:11 }}>
-              <div style={{ fontSize:12, fontWeight:800, color:'#166534', marginBottom:10 }}>📦 Cajas Grandes</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            {/* ── CAJA GRANDE ── */}
+            <div style={{ background:'#F0FDF4', border:'1px solid #BBF7D0', borderRadius:12, padding:'13px', marginBottom:11 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:'#166534', marginBottom:10 }}>📦 Caja Grande</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:9 }}>
                 <div>
-                  <label style={{ fontSize:12, fontWeight:700, color:'#166534', display:'block', marginBottom:5 }}>Número de cajas</label>
-                  <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff' }}/>
+                  <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Número de cajas</label>
+                  <input type="number" value={form.cG} min={0} onChange={setf('cG')} style={{ background:'#fff', fontSize:16, fontWeight:700 }}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:12, fontWeight:700, color:'#166534', display:'block', marginBottom:5 }}>Piezas por caja grande</label>
-                  <input type="number" value={form.pCG} min={1} onChange={setf('pCG')} style={{ background:'#fff' }} placeholder="Ej: 4500"/>
+                  <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Paquetes por caja</label>
+                  <input type="number" value={form.paqCG} min={1} onChange={setf('paqCG')} style={{ background:'#fff' }} placeholder="Ej: 4"/>
                 </div>
               </div>
-              {(+form.cG>0 && +form.pCG>0) && (
-                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:13, fontWeight:700, color:'#16A34A' }}>
-                  → {fmtN(+form.cG * +form.pCG)} pzas en cajas grandes
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, color:'#166534', display:'block', marginBottom:4 }}>Flyers por paquete</label>
+                <input type="number" value={form.pzPaq} min={1} onChange={setf('pzPaq')} style={{ background:'#fff' }} placeholder="Ej: 1125"/>
+              </div>
+              {(+form.cG>0 && +form.paqCG>0 && +form.pzPaq>0) && (
+                <div style={{ marginTop:8, background:'#DCFCE7', borderRadius:8, padding:'7px 10px' }}>
+                  <span style={{ fontSize:11, color:'#166534' }}>1 caja = </span>
+                  <span style={{ fontFamily:'monospace', fontWeight:700, color:'#16A34A' }}>{form.paqCG} paq. × {fmtN(+form.pzPaq)} = {fmtN(+form.paqCG * +form.pzPaq)} flyers</span>
+                  <span style={{ fontSize:11, color:'#166534', marginLeft:8 }}>| Total cajas: </span>
+                  <span style={{ fontFamily:'monospace', fontWeight:800, color:'#16A34A' }}>{fmtN(+form.cG * +form.paqCG * +form.pzPaq)}</span>
                 </div>
               )}
             </div>
-            {/* Cajas Chicas */}
-            <div style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:11, padding:'12px 13px', marginBottom:11 }}>
-              <div style={{ fontSize:12, fontWeight:800, color:t.textSub, marginBottom:10 }}>🗃️ Cajas Chicas</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+
+            {/* ── CAJA CHICA ── */}
+            <div style={{ background:t.cardAlt, border:`1px solid ${t.border}`, borderRadius:12, padding:'13px', marginBottom:11 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:t.textSub, marginBottom:10 }}>🗃️ Caja Chica</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9 }}>
                 <div>
-                  <label style={{ fontSize:12, fontWeight:700, color:t.textSub, display:'block', marginBottom:5 }}>Número de cajas</label>
-                  <input type="number" value={form.cC} min={0} onChange={setf('cC')}/>
+                  <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Número de cajas</label>
+                  <input type="number" value={form.cC} min={0} onChange={setf('cC')} style={{ fontSize:16, fontWeight:700 }}/>
                 </div>
                 <div>
-                  <label style={{ fontSize:12, fontWeight:700, color:t.textSub, display:'block', marginBottom:5 }}>Piezas en caja chica</label>
+                  <label style={{ fontSize:11, fontWeight:700, color:t.textSub, display:'block', marginBottom:4 }}>Flyers en caja chica</label>
                   <input type="number" value={form.pCC} min={0} onChange={setf('pCC')} placeholder="Ej: 3188"/>
                 </div>
               </div>
               {(+form.cC>0 && +form.pCC>0) && (
-                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:13, fontWeight:700, color:t.textSub }}>
-                  → {fmtN(+form.cC * +form.pCC)} pzas en cajas chicas
+                <div style={{ marginTop:8, fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.textSub }}>
+                  Total caja chica: {fmtN(+form.cC * +form.pCC)} flyers
                 </div>
               )}
             </div>
-            {/* Total preview */}
-            {(+form.cG>0||+form.cC>0) && (+form.pCG>0||+form.pCC>0) && (
+
+            {/* ── TOTAL ── */}
+            {(+form.cG>0||+form.cC>0) && (
               <div style={{ background:'#16A34A', borderRadius:10, padding:'10px 14px', marginBottom:11, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ color:'rgba(255,255,255,.8)', fontSize:12, fontWeight:700 }}>TOTAL PIEZAS</span>
-                <span style={{ fontFamily:'monospace', fontSize:20, fontWeight:900, color:'#fff' }}>
-                  {fmtN((+form.cG*(+form.pCG||0)) + (+form.cC*(+form.pCC||0)))}
+                <span style={{ color:'rgba(255,255,255,.75)', fontSize:12, fontWeight:700 }}>TOTAL FLYERS</span>
+                <span style={{ fontFamily:'monospace', fontSize:22, fontWeight:900, color:'#fff' }}>
+                  {fmtN((+form.cG * +form.paqCG * +form.pzPaq) + (+form.cC * +form.pCC))}
                 </span>
               </div>
             )}
