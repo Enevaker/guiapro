@@ -2267,16 +2267,17 @@ function FlayersScreen({ t }) {
                 </div>
 
                 {/* Desglose en 3 niveles — una sola fila */}
-                <div style={{ padding:'0 14px 12px', display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
+                {/* Un solo recuadro con las 3 columnas dentro */}
+                <div style={{ margin:'0 14px 12px', background:t.primaryLight, border:`1px solid ${t.border}`, borderRadius:12, display:'flex', overflow:'hidden' }}>
                   {[
-                    ['📦', c.cajC===0?'—':c.cajC,         'caja'+(c.cajC!==1?'s':''),  c.cajC>0],
-                    ['🗃️', c.paqS===0?'—':c.paqS,         'paquete'+(c.paqS!==1?'s':''), c.paqS>0],
-                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS),    'flyers sueltos',             c.pzS>0],
-                  ].map(([ico,val,lbl,hasVal])=>(
-                    <div key={lbl} style={{ background:t.primaryLight, borderRadius:10, padding:'9px 8px', border:`1px solid ${t.border}`, textAlign:'center' }}>
-                      <div style={{ fontSize:16, marginBottom:3 }}>{ico}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:900, color:hasVal?t.primary:'#94a3b8', lineHeight:1 }}>{val}</div>
-                      <div style={{ fontSize:9, color:t.primaryDark, fontWeight:600, marginTop:3 }}>{lbl}</div>
+                    ['📦', c.cajC===0?'—':c.cajC,      'caja'+(c.cajC!==1?'s':''),    c.cajC>0],
+                    ['🗃️', c.paqS===0?'—':c.paqS,      'paquete'+(c.paqS!==1?'s':''), c.paqS>0],
+                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'flyers sueltos',              c.pzS>0],
+                  ].map(([ico,val,lbl,hasVal],i)=>(
+                    <div key={lbl} style={{ flex:1, textAlign:'center', padding:'10px 6px', borderRight: i<2?`1px solid ${t.border}`:'none' }}>
+                      <div style={{ fontSize:15 }}>{ico}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:17, fontWeight:900, color:hasVal?t.primary:'#94a3b8', lineHeight:1.1 }}>{val}</div>
+                      <div style={{ fontSize:9, color:t.primaryDark, fontWeight:600, marginTop:2 }}>{lbl}</div>
                     </div>
                   ))}
                 </div>
