@@ -2227,29 +2227,48 @@ function FlayersScreen({ t }) {
           {/* Tarjetas rediseñadas */}
           {shown.map(f=>{
             const c=calcFl(f,P);
+            const pCG = f.pCG || (f.paqCG||4)*(f.pzPaq||1125);
             return (
               <div key={f.id} style={{ background:t.card, borderRadius:16, border:`1px solid ${t.border}`, marginBottom:12, overflow:'hidden', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}>
 
-                {/* Encabezado: nombre + badge + total */}
-                <div style={{ padding:'14px 14px 12px', display:'flex', alignItems:'flex-start', gap:10 }}>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:15, fontWeight:800, color:t.text, lineHeight:1.3, marginBottom:5 }}>{f.name}</div>
+                {/* Encabezado: nombre + badge */}
+                <div style={{ padding:'13px 14px 10px' }}>
+                  <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:8 }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:t.text, lineHeight:1.3, flex:1 }}>{f.name}</div>
                     <FlCatBadge cat={f.cat}/>
                   </div>
-                  <div style={{ textAlign:'right', flexShrink:0 }}>
-                    <div style={{ fontSize:9, fontWeight:700, color:t.textMuted, textTransform:'uppercase', letterSpacing:.5 }}>Total</div>
-                    <div style={{ fontFamily:'monospace', fontSize:15, fontWeight:800, color:t.text }}>{fmtN(c.tot)}</div>
-                    <div style={{ fontSize:9, color:t.textMuted }}>pzas</div>
+                  {/* Inventario ingresado */}
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                    {f.cG>0 && (
+                      <div style={{ background:t.primaryLight, borderRadius:8, padding:'4px 10px', display:'flex', alignItems:'center', gap:4 }}>
+                        <span style={{ fontSize:12 }}>📦</span>
+                        <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.primary }}>{f.cG}</span>
+                        <span style={{ fontSize:11, color:t.primaryDark }}>cj ×</span>
+                        <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.primary }}>{fmtN(pCG)}</span>
+                      </div>
+                    )}
+                    {f.cC>0 && (
+                      <div style={{ background:t.cardAlt, borderRadius:8, padding:'4px 10px', display:'flex', alignItems:'center', gap:4, border:`1px solid ${t.border}` }}>
+                        <span style={{ fontSize:12 }}>🗃️</span>
+                        <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.textSub }}>{f.cC}</span>
+                        <span style={{ fontSize:11, color:t.textMuted }}>cj ×</span>
+                        <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:700, color:t.textSub }}>{fmtN(f.pCC)}</span>
+                      </div>
+                    )}
+                    <div style={{ background:t.cardAlt, borderRadius:8, padding:'4px 10px', border:`1px solid ${t.border}` }}>
+                      <span style={{ fontSize:11, color:t.textMuted }}>Total: </span>
+                      <span style={{ fontFamily:'monospace', fontSize:12, fontWeight:800, color:t.text }}>{fmtN(c.tot)}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Franja central: cantidad por supervisor */}
-                <div style={{ margin:'0 14px', background:`linear-gradient(135deg,${t.primary},${t.primaryDark})`, borderRadius:12, padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                {/* Franja azul: cantidad por supervisor */}
+                <div style={{ margin:'0 14px 12px', background:`linear-gradient(135deg,${t.primary},${t.primaryDark})`, borderRadius:12, padding:'11px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div>
                     <div style={{ fontSize:9, fontWeight:700, color:'rgba(255,255,255,.65)', textTransform:'uppercase', letterSpacing:.7, marginBottom:2 }}>Cada supervisor / quincena</div>
                     <div style={{ display:'flex', alignItems:'baseline', gap:6 }}>
-                      <span style={{ fontFamily:'monospace', fontSize:30, fontWeight:900, color:'#fff', lineHeight:1 }}>{fmtN(c.psq)}</span>
-                      <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.8)' }}>pzas</span>
+                      <span style={{ fontFamily:'monospace', fontSize:28, fontWeight:900, color:'#fff', lineHeight:1 }}>{fmtN(c.psq)}</span>
+                      <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,.75)' }}>pzas</span>
                     </div>
                   </div>
                   {c.sob>0 && (
@@ -2260,15 +2279,15 @@ function FlayersScreen({ t }) {
                   )}
                 </div>
 
-                {/* Fila inferior: cajas + sueltos */}
-                <div style={{ display:'flex', margin:'10px 14px 14px', border:`1px solid ${t.border}`, borderRadius:10, overflow:'hidden' }}>
+                {/* Fila inferior: cajas completas + flyers sueltos */}
+                <div style={{ display:'flex', margin:'0 14px 14px', border:`1px solid ${t.border}`, borderRadius:10, overflow:'hidden' }}>
                   {[
-                    ['📦', c.cajC===0?'—':c.cajC,      'Cajas completas',  c.cajC>0],
-                    ['🗞️', c.pzS===0?'—':fmtN(c.pzS), 'Flyers sueltos',   c.pzS>0],
-                  ].map(([ico,val,lbl,hasVal],i)=>(
+                    ['📦', c.cajC, 'Cajas completas'],
+                    ['🗞️', c.pzS,  'Flyers sueltos'],
+                  ].map(([ico,val,lbl],i)=>(
                     <div key={lbl} style={{ flex:1, textAlign:'center', padding:'10px 4px', background: i===0?t.cardAlt:t.card, borderRight: i===0?`1px solid ${t.border}`:'none' }}>
                       <div style={{ fontSize:14, marginBottom:2 }}>{ico}</div>
-                      <div style={{ fontFamily:'monospace', fontSize:18, fontWeight:900, color:hasVal?t.primary:'#94a3b8' }}>{val}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:19, fontWeight:900, color: val>0?t.primary:t.textMuted }}>{val>0?fmtN(val):0}</div>
                       <div style={{ fontSize:9, color:t.textMuted, fontWeight:600, marginTop:2 }}>{lbl}</div>
                     </div>
                   ))}
